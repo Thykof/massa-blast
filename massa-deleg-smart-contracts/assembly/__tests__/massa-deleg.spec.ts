@@ -1,4 +1,9 @@
-import { Args, bytesToString, stringToBytes } from '@massalabs/as-types';
+import {
+  Args,
+  bytesToString,
+  stringToBytes,
+  u64ToBytes,
+} from '@massalabs/as-types';
 import {
   constructor,
   getStackingAddress,
@@ -8,6 +13,7 @@ import {
   setWithdrawableFor,
   ownerAddress,
   withdrawable,
+  withdraw,
 } from '../contracts/massa-deleg';
 import {
   Address,
@@ -16,6 +22,8 @@ import {
   changeCallStack,
   resetStorage,
   mockTransferredCoins,
+  mockBalance,
+  balanceOf,
 } from '@massalabs/massa-as-sdk';
 import { StackingSession } from '../types/StackingSession';
 import { DepositEvent } from '../events/DepositEvent';
@@ -48,6 +56,9 @@ beforeEach(() => {
 
   mockAdminContext(false);
   switchUser(userAddress);
+  mockTransferredCoins(0);
+  mockBalance(contractAddress.toString(), 0);
+  mockBalance(userAddress.toString(), 0);
 });
 
 describe('constructor', () => {
@@ -71,13 +82,17 @@ describe('constructor', () => {
 });
 
 describe('deposit', () => {
-  throws('error: minimum stacking amount', () => {
+  test('error: minimum stacking amount', () => {
     mockTransferredCoins(200);
-    deposit([]);
+    expect(() => {
+      deposit([]);
+    }).toThrow();
   });
-  throws('error: minimum stacking amount, limit', () => {
+  test('error: minimum stacking amount, limit', () => {
     mockTransferredCoins(9_999_999_999);
-    deposit([]);
+    expect(() => {
+      deposit([]);
+    }).toThrow();
   });
   test('deposit success', () => {
     const amount = 10_000_000_000;
@@ -112,22 +127,55 @@ describe('requestWithdraw', () => {
 });
 
 describe('setWithdrawableFor', () => {
-  throws('no owner', () => {
-    const amount = u64(5_000_000_000);
-    setWithdrawableFor(new Args().add(userAddress).add(amount).serialize());
+  test('no owner', () => {
+    const amount = u64(5_400_000_000);
+    expect(() => {
+      setWithdrawableFor(new Args().add(userAddress).add(amount).serialize());
+    }).toThrow();
+  });
+
+  test('no transferer coins', () => {
+    switchUser(adminAddress);
+    const amount = u64(5_050_000_000);
+    expect(() => {
+      setWithdrawableFor(new Args().add(userAddress).add(amount).serialize());
+    }).toThrow();
+  });
+
+  test('not enough transferer coins', () => {
+    switchUser(adminAddress);
+    const amountToSet = u64(5_060_000_000);
+    const amount = u64(3_050_000_000);
+    mockBalance(adminAddress.toString(), amount);
+    mockTransferredCoins(amount);
+    expect(() => {
+      setWithdrawableFor(
+        new Args().add(userAddress).add(amountToSet).serialize(),
+      );
+    }).toThrow();
   });
 
   test('owner', () => {
+    // prepare
     switchUser(adminAddress);
-    const amount = u64(5_000_000_000);
+    const amount = u64(5_000_000_300);
+    mockBalance(adminAddress.toString(), amount);
+
+    // do
+    mockTransferredCoins(amount);
     const result = setWithdrawableFor(
       new Args().add(userAddress).add(amount).serialize(),
     );
+    mockTransferredCoins(0);
+
+    // assert
     const resultEvent = new Args(result)
       .nextSerializable<SetWithdrawableEvent>()
       .unwrap();
     expect(resultEvent.userAddress).toStrictEqual(userAddress);
     expect(resultEvent.amount).toStrictEqual(amount);
+
+    // check consequences
     switchUser(userAddress);
     const data = withdrawable(new Args().add(userAddress).serialize());
     const resultAmount = new Args(data).nextU64().unwrap();
