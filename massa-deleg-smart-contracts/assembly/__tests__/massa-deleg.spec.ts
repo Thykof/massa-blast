@@ -193,6 +193,79 @@ describe('withdrawable', () => {
   });
 });
 
+describe('withdraw', () => {
+  test('random address', () => {
+    switchUser(new Address(generateDumbAddress()));
+    expect(() => {
+      withdraw([]);
+    }).toThrow();
+  });
+
+  test('not enough amount to withdraw', () => {
+    expect(() => {
+      withdraw([]);
+    }).toThrow();
+  });
+
+  test('withdraw amount too low', () => {
+    // prepare
+    switchUser(adminAddress);
+    const amount = u64(5_000_001_000);
+    mockBalance(adminAddress.toString(), amount);
+    mockTransferredCoins(amount);
+    setWithdrawableFor(new Args().add(userAddress).add(amount).serialize());
+    mockTransferredCoins(0);
+
+    // test
+    switchUser(userAddress);
+    expect(() => {
+      withdraw([]);
+    }).toThrow();
+  });
+
+  test('not enough balance in the contract to withdraw', () => {
+    // prepare
+    switchUser(adminAddress);
+    const amount = u64(15_000_080_000);
+    mockBalance(adminAddress.toString(), amount);
+    mockTransferredCoins(amount);
+    setWithdrawableFor(new Args().add(userAddress).add(amount).serialize());
+    mockTransferredCoins(0);
+
+    // test
+    switchUser(userAddress);
+    expect(() => {
+      withdraw([]);
+    }).toThrow();
+  });
+
+  test('success', () => {
+    // prepare: admin calls setWithdrawableFor
+    switchUser(adminAddress);
+    const amount = u64(11_000_200_000);
+    mockBalance(adminAddress.toString(), amount);
+    mockTransferredCoins(amount);
+    setWithdrawableFor(new Args().add(userAddress).add(amount).serialize());
+    mockTransferredCoins(0); // reset transferred coins
+
+    // check that the amount is set
+    // mock contract balance because mockTransferredCoins don't credit the contract:
+    mockBalance(contractAddress.toString(), amount);
+    expect(balanceOf(contractAddress.toString())).toStrictEqual(amount);
+    let data = withdrawable(new Args().add(userAddress).serialize());
+    const resultAmount = new Args(data).nextU64().unwrap();
+    expect(resultAmount).toStrictEqual(amount);
+
+    // test
+    switchUser(userAddress);
+    data = withdraw([]);
+
+    // assert
+    expect(data).toStrictEqual(u64ToBytes(amount));
+    expect(balanceOf(userAddress.toString())).toStrictEqual(amount);
+  });
+});
+
 describe('stackingSessionOf', () => {
   test('random address', () => {
     const data = stackingSessionOf(
