@@ -1,8 +1,16 @@
-import { Entity, Column, BaseEntity, ObjectIdColumn, ObjectId } from 'typeorm';
+import {
+  Entity,
+  Column,
+  BaseEntity,
+  ObjectIdColumn,
+  ObjectId,
+  CreateDateColumn,
+} from 'typeorm';
 
 @Entity()
 export class TotalRollsRecord extends BaseEntity {
   @ObjectIdColumn() id: ObjectId;
 
-  @Column() value: string;
+  @Column() value: number;
+  @CreateDateColumn() createdAt: Date;
 }
