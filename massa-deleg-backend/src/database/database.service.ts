@@ -19,8 +19,18 @@ export class DatabaseService {
 
     await totalRollsRecord.save();
   }
-  @Cron(CronExpression.EVERY_10_SECONDS)
-  fetchAndSaveTotalRolls() {
-    this.logger.log('Fetching and saving total rolls');
+
+  async getTotalRolls(
+    fromDate: Date,
+    toDate: Date,
+  ): Promise<TotalRollsRecord[]> {
+    return await this.repo.find({
+      where: {
+        createdAt: {
+          $gte: fromDate,
+          $lt: toDate,
+        },
+      },
+    });
   }
 }
