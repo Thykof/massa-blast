@@ -128,30 +128,15 @@ describe('requestWithdraw', () => {
 
 describe('setWithdrawableFor', () => {
   test('no owner', () => {
-    const amount = u64(5_400_000_000);
     expect(() => {
-      setWithdrawableFor(new Args().add(userAddress).add(amount).serialize());
+      setWithdrawableFor(new Args().add(userAddress).serialize());
     }).toThrow();
   });
 
   test('no transferer coins', () => {
     switchUser(adminAddress);
-    const amount = u64(5_050_000_000);
     expect(() => {
-      setWithdrawableFor(new Args().add(userAddress).add(amount).serialize());
-    }).toThrow();
-  });
-
-  test('not enough transferer coins', () => {
-    switchUser(adminAddress);
-    const amountToSet = u64(5_060_000_000);
-    const amount = u64(3_050_000_000);
-    mockBalance(adminAddress.toString(), amount);
-    mockTransferredCoins(amount);
-    expect(() => {
-      setWithdrawableFor(
-        new Args().add(userAddress).add(amountToSet).serialize(),
-      );
+      setWithdrawableFor(new Args().add(userAddress).serialize());
     }).toThrow();
   });
 
@@ -213,7 +198,7 @@ describe('withdraw', () => {
     const amount = u64(5_000_001_000);
     mockBalance(adminAddress.toString(), amount);
     mockTransferredCoins(amount);
-    setWithdrawableFor(new Args().add(userAddress).add(amount).serialize());
+    setWithdrawableFor(new Args().add(userAddress).serialize());
     mockTransferredCoins(0);
 
     // test
@@ -229,7 +214,7 @@ describe('withdraw', () => {
     const amount = u64(15_000_080_000);
     mockBalance(adminAddress.toString(), amount);
     mockTransferredCoins(amount);
-    setWithdrawableFor(new Args().add(userAddress).add(amount).serialize());
+    setWithdrawableFor(new Args().add(userAddress).serialize());
     mockTransferredCoins(0);
 
     // test
@@ -245,7 +230,7 @@ describe('withdraw', () => {
     const amount = u64(11_000_200_000);
     mockBalance(adminAddress.toString(), amount);
     mockTransferredCoins(amount);
-    setWithdrawableFor(new Args().add(userAddress).add(amount).serialize());
+    setWithdrawableFor(new Args().add(userAddress).serialize());
     mockTransferredCoins(0); // reset transferred coins
 
     // check that the amount is set

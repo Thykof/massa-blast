@@ -108,7 +108,8 @@ export function setWithdrawableFor(
   const userAddress = args
     .nextSerializable<Address>()
     .expect('userAddress argument is missing or invalid');
-  const amount = args.nextU64().expect('amount argument is missing or invalid');
+  const amount = transferredCoins();
+  assert(amount > 0, 'Amount must be greater than 0.');
   Storage.set(withdrawableKeyOf(userAddress), u64ToBytes(amount));
 
   consolidatePayment(initialSCBalance, 0, 0, 0, amount);
