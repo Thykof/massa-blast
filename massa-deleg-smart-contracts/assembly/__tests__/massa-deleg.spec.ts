@@ -98,6 +98,12 @@ describe('deposit', () => {
       deposit([]);
     }).toThrow();
   });
+  throws('Stacking session already exists', () => {
+    const amount = 10_000_000_000;
+    mockTransferredCoins(amount);
+    deposit([]);
+    deposit([]);
+  });
   test('deposit success', () => {
     const amount = 10_000_000_000;
     mockTransferredCoins(amount);

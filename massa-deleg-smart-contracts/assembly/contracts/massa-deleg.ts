@@ -71,6 +71,7 @@ export function destroy(_: StaticArray<u8>): StaticArray<u8> {
 }
 
 export function deposit(_: StaticArray<u8>): StaticArray<u8> {
+  const initialSCBalance = balance();
   const amount = transferredCoins();
   assert(
     amount >= MIN_STACKING_AMOUNT,
@@ -80,7 +81,12 @@ export function deposit(_: StaticArray<u8>): StaticArray<u8> {
   const caller = Context.caller();
 
   const stackingSession = new StackingSession(startTimestamp, amount, caller);
-  Storage.set(stackingSessionKeyOf(caller), stackingSession.serialize());
+  const keyStackingSession = stackingSessionKeyOf(caller);
+  assert(!Storage.has(keyStackingSession), 'Stacking session already exists.');
+  Storage.set(keyStackingSession, stackingSession.serialize());
+
+  // assert that the caller sent enough coins for the storage fees and the amount to be set as withdrawable
+  consolidatePayment(initialSCBalance, 0, 0, 0, amount);
 
   const depositEvent = new DepositEvent(amount, caller, startTimestamp);
   generateEvent(depositEvent.toJson());
@@ -161,6 +167,7 @@ export function withdraw(_: StaticArray<u8>): StaticArray<u8> {
   const caller = Context.caller();
 
   const keyWithdrawable = withdrawableKeyOf(caller);
+  const keyStackingSession = stackingSessionKeyOf(caller);
   assert(
     Storage.has(keyWithdrawable),
     'No withdrawable amount for the caller.',
@@ -179,7 +186,7 @@ export function withdraw(_: StaticArray<u8>): StaticArray<u8> {
   transferCoins(caller, amountWithdrawable);
 
   Storage.del(keyWithdrawable);
-  Storage.del(stackingSessionKeyOf(caller));
+  Storage.del(keyStackingSession);
 
   consolidatePayment(initialSCBalance, 0, amountWithdrawable, 0, 0);
 
@@ -214,11 +221,11 @@ export function stackingSessionOf(
   const userAddress = args
     .nextSerializable<Address>()
     .expect('userAddress argument is missing or invalid');
-  const key = stackingSessionKeyOf(userAddress);
-  if (!Storage.has(key)) {
+  const keyStackingSession = stackingSessionKeyOf(userAddress);
+  if (!Storage.has(keyStackingSession)) {
     return [];
   }
-  return Storage.get(key);
+  return Storage.get(keyStackingSession);
 }
 
 export function getStackingAddress(_: StaticArray<u8>): StaticArray<u8> {
