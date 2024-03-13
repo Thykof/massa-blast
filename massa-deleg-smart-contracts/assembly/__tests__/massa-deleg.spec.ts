@@ -24,6 +24,7 @@ import {
   mockTransferredCoins,
   mockBalance,
   balanceOf,
+  mockOriginOperationId,
 } from '@massalabs/massa-as-sdk';
 import { StackingSession } from '../types/StackingSession';
 import { DepositEvent } from '../events/DepositEvent';
@@ -43,6 +44,9 @@ const stackingAddress = new Address(
 const userAddress = new Address(
   'AU12UBnqTHDQALpocVBnkPNy7y5CndUJQTLutaVDDFgMJcq5kQiKq',
 );
+
+const opId = 'O1uhe7LMJnS6t89MnQeqWSOIGlQ4enuY3bnlRITp55p03gVWw';
+const opId2 = 'O18C3G7uIx9oXKtmfU3A0UThU7F4OHJRWfIii7JXjWEabYOVK';
 
 function switchUser(user: Address): void {
   changeCallStack(user.toString() + ' , ' + contractAddress.toString());
@@ -117,7 +121,27 @@ describe('deposit', () => {
 });
 
 describe('requestWithdraw', () => {
-  test('requestWithdraw success', () => {
+  throws('No stacking session found for the caller', () => {
+    requestWithdraw([]);
+  });
+  throws('Withdraw request already exists for the operationId', () => {
+    // User deposit
+    const amountDeposit = 10_000_000_000;
+    mockTransferredCoins(amountDeposit);
+    deposit([]);
+    mockTransferredCoins(0);
+    // do
+    mockOriginOperationId(opId);
+    requestWithdraw([]);
+    requestWithdraw([]);
+  });
+  test('success', () => {
+    // prepare
+    // User deposit
+    const amountDeposit = 10_000_000_000;
+    mockTransferredCoins(amountDeposit);
+    deposit([]);
+    mockTransferredCoins(0);
     const result = requestWithdraw([]);
     const resultEvent = new Args(result)
       .nextSerializable<WithdrawEvent>()
@@ -127,29 +151,93 @@ describe('requestWithdraw', () => {
 });
 
 describe('setWithdrawableFor', () => {
-  test('no owner', () => {
-    expect(() => {
-      setWithdrawableFor(new Args().add(userAddress).serialize());
-    }).toThrow();
+  throws('no owner', () => {
+    setWithdrawableFor(
+      new Args().add(userAddress).add(opId).add(u64(100)).serialize(),
+    );
   });
-
-  test('no transferer coins', () => {
+  throws('No withdraw request for the operationId', () => {
     switchUser(adminAddress);
-    expect(() => {
-      setWithdrawableFor(new Args().add(userAddress).serialize());
-    }).toThrow();
+    setWithdrawableFor(
+      new Args().add(userAddress).add(opId).add(u64(100)).serialize(),
+    );
+  });
+  throws('User address does not match the withdraw request', () => {
+    // prepare
+    // User deposit
+    const amountDeposit = 10_000_000_000;
+    mockTransferredCoins(amountDeposit);
+    deposit([]);
+    mockTransferredCoins(0);
+    // User requests a withdraw
+    mockOriginOperationId(opId);
+    switchUser(userAddress);
+    requestWithdraw([]);
+    switchUser(adminAddress);
+    mockTransferredCoins(amountDeposit);
+    setWithdrawableFor(
+      new Args()
+        .add(stackingAddress) // not user address, should fail
+        .add(opId)
+        .add(u64(amountDeposit))
+        .serialize(),
+    );
+  });
+  throws('Withdrawable amount already set', () => {
+    // prepare
+    // User deposit
+    const amountDeposit = 10_000_000_000;
+    mockTransferredCoins(amountDeposit);
+    deposit([]);
+    mockTransferredCoins(0);
+    // User requests a withdraw
+    mockOriginOperationId(opId);
+    switchUser(userAddress);
+    requestWithdraw([]);
+    // admin send coins to withdraw
+    switchUser(adminAddress);
+    mockTransferredCoins(amountDeposit);
+    setWithdrawableFor(
+      new Args().add(userAddress).add(opId).add(u64(amountDeposit)).serialize(),
+    );
+    // do
+    // User deposit
+    // TODO: user can do multiple deposit, do we want that?
+    mockTransferredCoins(amountDeposit);
+    deposit([]);
+    mockTransferredCoins(0);
+    // User requests a withdraw
+    mockOriginOperationId(opId);
+    switchUser(userAddress);
+    requestWithdraw([]);
+    // admin send coins to withdraw
+    switchUser(adminAddress);
+    mockTransferredCoins(amountDeposit);
+    setWithdrawableFor(
+      new Args().add(userAddress).add(opId).add(u64(amountDeposit)).serialize(),
+    );
   });
 
   test('owner', () => {
     // prepare
+    // User deposit
+    const amountDeposit = 10_000_000_000;
+    mockTransferredCoins(amountDeposit);
+    deposit([]);
+    mockTransferredCoins(0);
+    // User requests a withdraw
+    mockOriginOperationId(opId);
+    switchUser(userAddress);
+    requestWithdraw([]);
+    // prepare admin call
     switchUser(adminAddress);
     const amount = u64(5_000_000_300);
     mockBalance(adminAddress.toString(), amount);
 
-    // do
+    // do: Admin calls setWithdrawableFor
     mockTransferredCoins(amount);
     const result = setWithdrawableFor(
-      new Args().add(userAddress).add(amount).serialize(),
+      new Args().add(userAddress).add(opId).add(amount).serialize(),
     );
     mockTransferredCoins(0);
 
@@ -192,29 +280,25 @@ describe('withdraw', () => {
     }).toThrow();
   });
 
-  test('withdraw amount too low', () => {
-    // prepare
-    switchUser(adminAddress);
-    const amount = u64(5_000_001_000);
-    mockBalance(adminAddress.toString(), amount);
-    mockTransferredCoins(amount);
-    setWithdrawableFor(new Args().add(userAddress).serialize());
-    mockTransferredCoins(0);
-
-    // test
-    switchUser(userAddress);
-    expect(() => {
-      withdraw([]);
-    }).toThrow();
-  });
-
   test('not enough balance in the contract to withdraw', () => {
     // prepare
+    // User deposit
+    const amountDeposit = 10_000_000_000;
+    mockTransferredCoins(amountDeposit);
+    deposit([]);
+    mockTransferredCoins(0);
+    // User requests a withdraw
+    mockOriginOperationId(opId);
+    switchUser(userAddress);
+    requestWithdraw([]);
+    // Admin calls setWithdrawableFor
     switchUser(adminAddress);
     const amount = u64(15_000_080_000);
     mockBalance(adminAddress.toString(), amount);
     mockTransferredCoins(amount);
-    setWithdrawableFor(new Args().add(userAddress).serialize());
+    setWithdrawableFor(
+      new Args().add(userAddress).add(opId).add(amount).serialize(),
+    );
     mockTransferredCoins(0);
 
     // test
@@ -225,12 +309,24 @@ describe('withdraw', () => {
   });
 
   test('success', () => {
-    // prepare: admin calls setWithdrawableFor
+    // prepare
+    // User deposit
+    const amountDeposit = 10_000_000_000;
+    mockTransferredCoins(amountDeposit);
+    deposit([]);
+    mockTransferredCoins(0);
+    // User requests a withdraw
+    mockOriginOperationId(opId);
+    switchUser(userAddress);
+    requestWithdraw([]);
+    // Admin calls setWithdrawableFor
     switchUser(adminAddress);
     const amount = u64(11_000_200_000);
     mockBalance(adminAddress.toString(), amount);
     mockTransferredCoins(amount);
-    setWithdrawableFor(new Args().add(userAddress).serialize());
+    setWithdrawableFor(
+      new Args().add(userAddress).add(opId).add(amount).serialize(),
+    );
     mockTransferredCoins(0); // reset transferred coins
 
     // check that the amount is set

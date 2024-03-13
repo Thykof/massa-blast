@@ -7,12 +7,14 @@ import {
   Storage,
   transferCoins,
   balance,
+  getOriginOperationId,
 } from '@massalabs/massa-as-sdk';
 import {
   Args,
   stringToBytes,
   u64ToBytes,
   bytesToU64,
+  bytesToString,
 } from '@massalabs/as-types';
 import { u128 } from 'as-bignum/assembly';
 
@@ -32,7 +34,6 @@ export * from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
 // Constants
 // TODO: move this constant in a parameter in the storage, editable by the owner
 export const MIN_STACKING_AMOUNT: u64 = 10_000_000_000;
-export const MIN_WITHDRAWABLE_AMOUNT: u64 = 10_000_000_000;
 
 const STACKING_ADDRESS_KEY = stringToBytes('stackingAddress');
 
@@ -76,23 +77,43 @@ export function deposit(_: StaticArray<u8>): StaticArray<u8> {
     'Amount is less than the minimum required.',
   );
   const startTimestamp = Context.timestamp();
-  const userAddress = Context.caller();
+  const caller = Context.caller();
 
-  const stackingSession = new StackingSession(
-    startTimestamp,
-    amount,
-    userAddress,
-  );
-  Storage.set(stackingSessionKeyOf(userAddress), stackingSession.serialize());
+  const stackingSession = new StackingSession(startTimestamp, amount, caller);
+  Storage.set(stackingSessionKeyOf(caller), stackingSession.serialize());
 
-  const depositEvent = new DepositEvent(amount, userAddress, startTimestamp);
+  const depositEvent = new DepositEvent(amount, caller, startTimestamp);
   generateEvent(depositEvent.toJson());
 
   return depositEvent.serialize();
 }
 
 export function requestWithdraw(_: StaticArray<u8>): StaticArray<u8> {
-  const withdrawEvent = new WithdrawEvent(Context.caller());
+  const initialSCBalance = balance();
+  const caller = Context.caller();
+
+  let opId = getOriginOperationId();
+  if (opId === null) {
+    // Fake an operation ID for the execute_read_only_call
+    opId = 'O1LNr9xyL9fVHbUvZao4jy6t2Pj5UPtLP0x1fxvS6SD7dPb5S52';
+  }
+
+  const keyStackingSession = stackingSessionKeyOf(caller);
+  assert(
+    Storage.has(keyStackingSession),
+    'No stacking session found for the caller.',
+  );
+
+  const keyWithdrawRequest = withdrawRequestKey(opId);
+  assert(
+    !Storage.has(keyWithdrawRequest),
+    'Withdraw request already exists for the operationId.',
+  );
+  Storage.set(keyWithdrawRequest, stringToBytes(caller.toString()));
+
+  consolidatePayment(initialSCBalance, 0, 0, 0, 0);
+
+  const withdrawEvent = new WithdrawEvent(caller);
   generateEvent(withdrawEvent.toJson());
   return withdrawEvent.serialize();
 }
@@ -108,10 +129,25 @@ export function setWithdrawableFor(
   const userAddress = args
     .nextSerializable<Address>()
     .expect('userAddress argument is missing or invalid');
-  const amount = transferredCoins();
-  assert(amount > 0, 'Amount must be greater than 0.');
-  Storage.set(withdrawableKeyOf(userAddress), u64ToBytes(amount));
+  const operationId = args
+    .nextString()
+    .expect('operationId argument is missing');
+  const amount = args.nextU64().expect('amount argument is missing');
 
+  const key = withdrawRequestKey(operationId);
+  assert(Storage.has(key), 'No withdraw request for the operationId.');
+  assert(
+    bytesToString(Storage.get(key)) === userAddress.toString(),
+    'User address does not match the withdraw request.',
+  );
+  Storage.del(key);
+
+  assert(amount > 0, 'Amount must be greater than 0.');
+  const keyWithdrawable = withdrawableKeyOf(userAddress);
+  assert(!Storage.has(keyWithdrawable), 'Withdrawable amount already set.');
+  Storage.set(keyWithdrawable, u64ToBytes(amount));
+
+  // assert that the caller sent enough coins for the storage fees and the amount to be set as withdrawable
   consolidatePayment(initialSCBalance, 0, 0, 0, amount);
 
   const setWithdrawableForEvent = new SetWithdrawableEvent(userAddress, amount);
@@ -122,28 +158,28 @@ export function setWithdrawableFor(
 
 export function withdraw(_: StaticArray<u8>): StaticArray<u8> {
   const initialSCBalance = balance();
+  const caller = Context.caller();
 
-  const key = withdrawableKeyOf(Context.caller());
-  assert(Storage.has(key), 'No withdrawable amount for the caller.');
-  const amountWithdrawableBytes = Storage.get(key);
-  const amountWithdrawable = bytesToU64(amountWithdrawableBytes);
+  const keyWithdrawable = withdrawableKeyOf(caller);
   assert(
-    amountWithdrawable >= MIN_WITHDRAWABLE_AMOUNT,
-    'Withdrawable amount ' +
-      amountWithdrawable.toString() +
-      ' is less than the minimum required: ' +
-      MIN_WITHDRAWABLE_AMOUNT.toString(),
+    Storage.has(keyWithdrawable),
+    'No withdrawable amount for the caller.',
   );
+  const amountWithdrawableBytes = Storage.get(keyWithdrawable);
+  const amountWithdrawable = bytesToU64(amountWithdrawableBytes);
   if (amountWithdrawable > balance()) {
     generateEvent(
       'CRITICAL: not enough balance in the contract to withdraw ' +
         amountWithdrawable.toString() +
         ' by ' +
-        Context.caller().toString(),
+        caller.toString(),
     );
     throw new Error('Not enough balance in the contract to withdraw');
   }
-  transferCoins(Context.caller(), amountWithdrawable);
+  transferCoins(caller, amountWithdrawable);
+
+  Storage.del(keyWithdrawable);
+  Storage.del(stackingSessionKeyOf(caller));
 
   consolidatePayment(initialSCBalance, 0, amountWithdrawable, 0, 0);
 
@@ -196,6 +232,10 @@ function stackingSessionKeyOf(userAddress: Address): StaticArray<u8> {
 
 function withdrawableKeyOf(userAddress: Address): StaticArray<u8> {
   return stringToBytes('Withdrawable_' + userAddress.toString());
+}
+
+function withdrawRequestKey(operationId: string): StaticArray<u8> {
+  return stringToBytes('WithdrawRequest_' + operationId);
 }
 
 /**
