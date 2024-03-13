@@ -110,12 +110,12 @@ export function requestWithdraw(_: StaticArray<u8>): StaticArray<u8> {
     'No stacking session found for the caller.',
   );
 
-  const keyWithdrawRequest = withdrawRequestKey(opId);
+  const keyWithdrawRequest = withdrawRequestKey(caller);
   assert(
     !Storage.has(keyWithdrawRequest),
-    'Withdraw request already exists for the operationId.',
+    'Withdraw request already exists for this user.',
   );
-  Storage.set(keyWithdrawRequest, stringToBytes(caller.toString()));
+  Storage.set(keyWithdrawRequest, stringToBytes(opId));
 
   consolidatePayment(initialSCBalance, 0, 0, 0, 0);
 
@@ -140,13 +140,12 @@ export function setWithdrawableFor(
     .expect('operationId argument is missing');
   const amount = args.nextU64().expect('amount argument is missing');
 
-  const key = withdrawRequestKey(operationId);
-  assert(Storage.has(key), 'No withdraw request for the operationId.');
+  const keyWithdrawRequest = withdrawRequestKey(userAddress);
+  assert(Storage.has(keyWithdrawRequest), 'No withdraw request for this user.');
   assert(
-    bytesToString(Storage.get(key)) === userAddress.toString(),
-    'User address does not match the withdraw request.',
+    bytesToString(Storage.get(keyWithdrawRequest)) === operationId,
+    'operationId does not match the withdraw request.',
   );
-  Storage.del(key);
 
   assert(amount > 0, 'Amount must be greater than 0.');
   const keyWithdrawable = withdrawableKeyOf(userAddress);
@@ -168,6 +167,7 @@ export function withdraw(_: StaticArray<u8>): StaticArray<u8> {
 
   const keyWithdrawable = withdrawableKeyOf(caller);
   const keyStackingSession = stackingSessionKeyOf(caller);
+  const keyWithdrawRequest = withdrawRequestKey(caller);
   assert(
     Storage.has(keyWithdrawable),
     'No withdrawable amount for the caller.',
@@ -187,6 +187,7 @@ export function withdraw(_: StaticArray<u8>): StaticArray<u8> {
 
   Storage.del(keyWithdrawable);
   Storage.del(keyStackingSession);
+  Storage.del(keyWithdrawRequest);
 
   consolidatePayment(initialSCBalance, 0, amountWithdrawable, 0, 0);
 
@@ -241,8 +242,8 @@ function withdrawableKeyOf(userAddress: Address): StaticArray<u8> {
   return stringToBytes('Withdrawable_' + userAddress.toString());
 }
 
-function withdrawRequestKey(operationId: string): StaticArray<u8> {
-  return stringToBytes('WithdrawRequest_' + operationId);
+function withdrawRequestKey(userAddress: Address): StaticArray<u8> {
+  return stringToBytes('WithdrawRequest_' + userAddress.toString());
 }
 
 /**

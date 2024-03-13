@@ -130,15 +130,25 @@ describe('requestWithdraw', () => {
   throws('No stacking session found for the caller', () => {
     requestWithdraw([]);
   });
-  throws('Withdraw request already exists for the operationId', () => {
+  throws('Withdraw request already exists for this user', () => {
+    // prepare
     // User deposit
     const amountDeposit = 10_000_000_000;
     mockTransferredCoins(amountDeposit);
     deposit([]);
     mockTransferredCoins(0);
-    // do
+    // User requests a withdraw
     mockOriginOperationId(opId);
     requestWithdraw([]);
+    // admin send coins to withdraw
+    switchUser(adminAddress);
+    mockTransferredCoins(amountDeposit);
+    setWithdrawableFor(
+      new Args().add(userAddress).add(opId).add(u64(amountDeposit)).serialize(),
+    );
+    mockTransferredCoins(0);
+    // User requests a withdraw as second time
+    switchUser(userAddress);
     requestWithdraw([]);
   });
   test('success', () => {
@@ -162,13 +172,13 @@ describe('setWithdrawableFor', () => {
       new Args().add(userAddress).add(opId).add(u64(100)).serialize(),
     );
   });
-  throws('No withdraw request for the operationId', () => {
+  throws('No withdraw request for this user', () => {
     switchUser(adminAddress);
     setWithdrawableFor(
       new Args().add(userAddress).add(opId).add(u64(100)).serialize(),
     );
   });
-  throws('User address does not match the withdraw request', () => {
+  throws('operationId does not match the withdraw request', () => {
     // prepare
     // User deposit
     const amountDeposit = 10_000_000_000;
@@ -177,14 +187,14 @@ describe('setWithdrawableFor', () => {
     mockTransferredCoins(0);
     // User requests a withdraw
     mockOriginOperationId(opId);
-    switchUser(userAddress);
     requestWithdraw([]);
+    // admin send coins to withdraw
     switchUser(adminAddress);
     mockTransferredCoins(amountDeposit);
     setWithdrawableFor(
       new Args()
-        .add(stackingAddress) // not user address, should fail
-        .add(opId)
+        .add(userAddress)
+        .add(opId2) // should fail
         .add(u64(amountDeposit))
         .serialize(),
     );
@@ -198,7 +208,6 @@ describe('setWithdrawableFor', () => {
     mockTransferredCoins(0);
     // User requests a withdraw
     mockOriginOperationId(opId);
-    switchUser(userAddress);
     requestWithdraw([]);
     // admin send coins to withdraw
     switchUser(adminAddress);
@@ -206,15 +215,18 @@ describe('setWithdrawableFor', () => {
     setWithdrawableFor(
       new Args().add(userAddress).add(opId).add(u64(amountDeposit)).serialize(),
     );
-    // do
+    setWithdrawableFor(
+      new Args().add(userAddress).add(opId).add(u64(amountDeposit)).serialize(),
+    );
+  });
+  test('complex case', () => {
+    // prepare
     // User deposit
-    // TODO: user can do multiple deposit, do we want that?
+    const amountDeposit = 10_000_000_000;
     mockTransferredCoins(amountDeposit);
     deposit([]);
     mockTransferredCoins(0);
     // User requests a withdraw
-    mockOriginOperationId(opId);
-    switchUser(userAddress);
     requestWithdraw([]);
     // admin send coins to withdraw
     switchUser(adminAddress);
@@ -222,6 +234,48 @@ describe('setWithdrawableFor', () => {
     setWithdrawableFor(
       new Args().add(userAddress).add(opId).add(u64(amountDeposit)).serialize(),
     );
+    mockBalance(contractAddress.toString(), amountDeposit);
+    mockTransferredCoins(0);
+    // User can't requests a withdraw as second time
+    switchUser(userAddress);
+    expect(() => {
+      requestWithdraw([]);
+    }).toThrow(
+      'should fail with: Withdraw request already exists for this user',
+    );
+    // admin can't send coins to withdraw
+    switchUser(adminAddress);
+    mockTransferredCoins(amountDeposit);
+    expect(() => {
+      setWithdrawableFor(
+        new Args()
+          .add(userAddress)
+          .add(opId)
+          .add(u64(amountDeposit))
+          .serialize(),
+      );
+    }).toThrow('should fail with: Withdrawable amount already set');
+    mockTransferredCoins(0);
+    // user withdraw
+    switchUser(userAddress);
+    withdraw([]);
+    // admin still can't send coins to withdraw
+    switchUser(adminAddress);
+    mockTransferredCoins(amountDeposit);
+    expect(() => {
+      setWithdrawableFor(
+        new Args()
+          .add(userAddress)
+          .add(opId)
+          .add(u64(amountDeposit))
+          .serialize(),
+      );
+    }).toThrow('should fail with: No withdraw request for this user');
+    // User can't ask for withdraw if no deposit
+    switchUser(userAddress);
+    expect(() => {
+      requestWithdraw([]);
+    }).toThrow('should fail with: No stacking session found for the caller');
   });
 
   test('owner', () => {
