@@ -89,7 +89,8 @@ describe('deposit', () => {
   test('error: minimum blasting amount', () => {
     mockTransferredCoins(200);
     expect(() => {
-      deposit([]);
+      const amountDeposit = 2_000_000;
+      deposit(new Args().add(amountDeposit).serialize());
     }).toThrow();
   });
   test('error: minimum blasting amount, limit', () => {
@@ -105,9 +106,9 @@ describe('deposit', () => {
     deposit([]);
   });
   test('deposit success', () => {
-    const amount = 10_000_000_000;
-    mockTransferredCoins(amount);
-    const result = deposit([]);
+    const amountDeposit = 10_000_000_000;
+    mockTransferredCoins(amountDeposit);
+    const result = deposit(new Args().add(amountDeposit).serialize());
     const data = blastingSessionOf(new Args().add(userAddress).serialize());
     const blastingSession = new Args(data)
       .nextSerializable<BlastingSession>()
@@ -115,12 +116,12 @@ describe('deposit', () => {
     expect(Context.timestamp() - blastingSession.startTimestamp).toBeLessThan(
       2,
     );
-    expect(blastingSession.amount).toStrictEqual(amount);
+    expect(blastingSession.amount).toStrictEqual(amountDeposit);
     expect(blastingSession.userAddress).toStrictEqual(userAddress);
     const resultEvent = new Args(result)
       .nextSerializable<DepositEvent>()
       .unwrap();
-    expect(resultEvent.amount).toStrictEqual(amount);
+    expect(resultEvent.amount).toStrictEqual(amountDeposit);
     expect(resultEvent.userAddress).toStrictEqual(userAddress);
     expect(resultEvent.timestamp).toStrictEqual(blastingSession.startTimestamp);
   });
@@ -135,7 +136,7 @@ describe('requestWithdraw', () => {
     // User deposit
     const amountDeposit = 10_000_000_000;
     mockTransferredCoins(amountDeposit);
-    deposit([]);
+    deposit(new Args().add(amountDeposit).serialize());
     mockTransferredCoins(0);
     // User requests a withdraw
     mockOriginOperationId(opId);
@@ -156,7 +157,7 @@ describe('requestWithdraw', () => {
     // User deposit
     const amountDeposit = 10_000_000_000;
     mockTransferredCoins(amountDeposit);
-    deposit([]);
+    deposit(new Args().add(amountDeposit).serialize());
     mockTransferredCoins(0);
     const result = requestWithdraw([]);
     const resultEvent = new Args(result)
@@ -183,7 +184,7 @@ describe('setWithdrawableFor', () => {
     // User deposit
     const amountDeposit = 10_000_000_000;
     mockTransferredCoins(amountDeposit);
-    deposit([]);
+    deposit(new Args().add(amountDeposit).serialize());
     mockTransferredCoins(0);
     // User requests a withdraw
     mockOriginOperationId(opId);
@@ -204,7 +205,7 @@ describe('setWithdrawableFor', () => {
     // User deposit
     const amountDeposit = 10_000_000_000;
     mockTransferredCoins(amountDeposit);
-    deposit([]);
+    deposit(new Args().add(amountDeposit).serialize());
     mockTransferredCoins(0);
     // User requests a withdraw
     mockOriginOperationId(opId);
@@ -224,7 +225,7 @@ describe('setWithdrawableFor', () => {
     // User deposit
     const amountDeposit = 10_000_000_000;
     mockTransferredCoins(amountDeposit);
-    deposit([]);
+    deposit(new Args().add(amountDeposit).serialize());
     mockTransferredCoins(0);
     // User requests a withdraw
     requestWithdraw([]);
@@ -283,7 +284,7 @@ describe('setWithdrawableFor', () => {
     // User deposit
     const amountDeposit = 10_000_000_000;
     mockTransferredCoins(amountDeposit);
-    deposit([]);
+    deposit(new Args().add(amountDeposit).serialize());
     mockTransferredCoins(0);
     // User requests a withdraw
     mockOriginOperationId(opId);
@@ -345,7 +346,7 @@ describe('withdraw', () => {
     // User deposit
     const amountDeposit = 10_000_000_000;
     mockTransferredCoins(amountDeposit);
-    deposit([]);
+    deposit(new Args().add(amountDeposit).serialize());
     mockTransferredCoins(0);
     // User requests a withdraw
     mockOriginOperationId(opId);
@@ -373,7 +374,7 @@ describe('withdraw', () => {
     // User deposit
     const amountDeposit = 10_000_000_000;
     mockTransferredCoins(amountDeposit);
-    deposit([]);
+    deposit(new Args().add(amountDeposit).serialize());
     mockTransferredCoins(0);
     // User requests a withdraw
     mockOriginOperationId(opId);

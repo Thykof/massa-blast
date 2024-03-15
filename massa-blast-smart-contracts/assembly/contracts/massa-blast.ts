@@ -70,9 +70,11 @@ export function destroy(_: StaticArray<u8>): StaticArray<u8> {
   return [];
 }
 
-export function deposit(_: StaticArray<u8>): StaticArray<u8> {
+export function deposit(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   const initialSCBalance = balance();
-  const amount = transferredCoins();
+  const amount = new Args(binaryArgs)
+    .nextU64()
+    .expect('amount argument is missing');
   assert(
     amount >= MIN_BLASTING_AMOUNT,
     'Amount is less than the minimum required.',
