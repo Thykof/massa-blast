@@ -36,6 +36,7 @@ export * from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
 export const MIN_BLASTING_AMOUNT: u64 = 10_000_000_000;
 
 const BLASTING_ADDRESS_KEY = stringToBytes('blastingAddress');
+const MAX_BLASTING_AMOUNT: u64 = 1_000_000_000_000_000;
 
 /**
  * This function is meant to be called only one time: when the contract is deployed.
@@ -85,7 +86,8 @@ export function deposit(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   const blastingSession = new BlastingSession(startTimestamp, amount, caller);
   const keyBlastingSession = blastingSessionKeyOf(caller);
   assert(!Storage.has(keyBlastingSession), 'Blasting session already exists.');
-  Storage.set(keyBlastingSession, blastingSession.serialize());
+  Storage.set(keyBlastingSession, new Args().add(blastingSession).serialize());
+  increaseTotalBlastingAmount(amount);
 
   // assert that the caller sent enough coins for the storage fees and the amount to be set as withdrawable
   consolidatePayment(initialSCBalance, 0, 0, 0, amount);
@@ -111,6 +113,9 @@ export function requestWithdraw(_: StaticArray<u8>): StaticArray<u8> {
     Storage.has(keyBlastingSession),
     'No blasting session found for the caller.',
   );
+  const blastingSession = new Args(Storage.get(keyBlastingSession))
+    .nextSerializable<BlastingSession>()
+    .expect('Blasting session is invalid');
 
   const keyWithdrawRequest = withdrawRequestKey(caller);
   assert(
@@ -118,6 +123,7 @@ export function requestWithdraw(_: StaticArray<u8>): StaticArray<u8> {
     'Withdraw request already exists for this user.',
   );
   Storage.set(keyWithdrawRequest, stringToBytes(opId));
+  decreaseTotalBlastingAmount(blastingSession.amount);
 
   consolidatePayment(initialSCBalance, 0, 0, 0, 0);
 
@@ -204,6 +210,14 @@ export function withdraw(_: StaticArray<u8>): StaticArray<u8> {
 }
 
 // read
+export function totalBlastingAmount(_: StaticArray<u8>): StaticArray<u8> {
+  const key = getTotalBlastingAmountKey();
+  if (!Storage.has(key)) {
+    return u64ToBytes(0);
+  }
+  return Storage.get(key);
+}
+
 export function withdrawable(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   const args = new Args(binaryArgs);
   const userAddress = args
@@ -236,6 +250,33 @@ export function getBlastingAddress(_: StaticArray<u8>): StaticArray<u8> {
 }
 
 // internal functions
+function increaseTotalBlastingAmount(amount: u64): void {
+  const key = getTotalBlastingAmountKey();
+  if (!Storage.has(key)) {
+    Storage.set(key, u64ToBytes(0));
+  }
+  const currentAmount = bytesToU64(Storage.get(key));
+  const newAmount = currentAmount + amount;
+  if (newAmount > MAX_BLASTING_AMOUNT) {
+    throw new Error('Exceeding max blasting amount');
+  }
+  Storage.set(key, u64ToBytes(newAmount));
+}
+
+function decreaseTotalBlastingAmount(amount: u64): void {
+  const key = getTotalBlastingAmountKey();
+  const currentAmount = bytesToU64(Storage.get(key));
+  if (currentAmount < amount) {
+    throw new Error('Not enough total blasting amount to decrease');
+  }
+  const newAmount = currentAmount - amount;
+  Storage.set(key, u64ToBytes(newAmount));
+}
+
+function getTotalBlastingAmountKey(): StaticArray<u8> {
+  return stringToBytes('TotalBlastingAmount');
+}
+
 function blastingSessionKeyOf(userAddress: Address): StaticArray<u8> {
   return stringToBytes('BlastingSession_' + userAddress.toString());
 }

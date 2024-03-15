@@ -14,6 +14,7 @@ import {
   ownerAddress,
   withdrawable,
   withdraw,
+  totalBlastingAmount,
 } from '../contracts/massa-blast';
 import {
   Address,
@@ -43,6 +44,9 @@ const blastingAddress = new Address(
 );
 const userAddress = new Address(
   'AU12UBnqTHDQALpocVBnkPNy7y5CndUJQTLutaVDDFgMJcq5kQiKq',
+);
+const userAddress2 = new Address(
+  'AU12e52VP4r3WYGUXonYSPX3njfJFevkKPBp4ru8sBjXnp14mSKJi',
 );
 
 const opId = 'O1uhe7LMJnS6t89MnQeqWSOIGlQ4enuY3bnlRITp55p03gVWw';
@@ -106,13 +110,16 @@ describe('deposit', () => {
     deposit([]);
   });
   test('deposit success', () => {
+    // do
     const amountDeposit = 10_000_000_000;
     mockTransferredCoins(amountDeposit);
     const result = deposit(new Args().add(amountDeposit).serialize());
+    // fetch result
     const data = blastingSessionOf(new Args().add(userAddress).serialize());
     const blastingSession = new Args(data)
       .nextSerializable<BlastingSession>()
       .unwrap();
+    // assert
     expect(Context.timestamp() - blastingSession.startTimestamp).toBeLessThan(
       2,
     );
@@ -159,11 +166,65 @@ describe('requestWithdraw', () => {
     mockTransferredCoins(amountDeposit);
     deposit(new Args().add(amountDeposit).serialize());
     mockTransferredCoins(0);
+    // user requests a withdraw
     const result = requestWithdraw([]);
     const resultEvent = new Args(result)
       .nextSerializable<WithdrawEvent>()
       .unwrap();
+    // assert
     expect(resultEvent.userAddress).toStrictEqual(userAddress);
+  });
+});
+
+describe('totalBlastingAmount', () => {
+  test('empty', () => {
+    expect(totalBlastingAmount([])).toStrictEqual(u64ToBytes(0));
+  });
+  test('one deposit', () => {
+    const amountDeposit = 10_000_000_000;
+    mockTransferredCoins(amountDeposit);
+    deposit(new Args().add(amountDeposit).serialize());
+    mockTransferredCoins(0);
+    expect(totalBlastingAmount([])).toStrictEqual(u64ToBytes(amountDeposit));
+  });
+  test('two deposits', () => {
+    // deposit 1
+    const amountDeposit = 10_000_000_000;
+    mockTransferredCoins(amountDeposit);
+    deposit(new Args().add(amountDeposit).serialize());
+    mockTransferredCoins(0);
+    // deposit 2
+    mockTransferredCoins(amountDeposit);
+    switchUser(userAddress2);
+    deposit(new Args().add(amountDeposit).serialize());
+    mockTransferredCoins(0);
+    // assert
+    expect(totalBlastingAmount([])).toStrictEqual(
+      u64ToBytes(amountDeposit * 2),
+    );
+  });
+  test('two deposits and 0 request to withdraw', () => {
+    // deposit 1
+    const amountDeposit = 10_000_000_000;
+    mockTransferredCoins(amountDeposit);
+    deposit(new Args().add(amountDeposit).serialize());
+    mockTransferredCoins(0);
+    // deposit 2
+    mockTransferredCoins(amountDeposit);
+    switchUser(userAddress2);
+    deposit(new Args().add(amountDeposit).serialize());
+    mockTransferredCoins(0);
+    // user request withdraw
+    requestWithdraw([]);
+    // assert
+    expect(totalBlastingAmount([])).toStrictEqual(u64ToBytes(amountDeposit));
+  });
+  throws('Exceeding max blasting amount', () => {
+    const amountDeposit = 1_000_000_000_000_001;
+    mockBalance(userAddress.toString(), amountDeposit * 2);
+    mockTransferredCoins(amountDeposit);
+    deposit(new Args().add(amountDeposit).serialize());
+    mockTransferredCoins(0);
   });
 });
 
