@@ -1,9 +1,7 @@
-// The entry file of your WebAssembly module.
 import {
   Context,
   generateEvent,
   Address,
-  transferredCoins,
   Storage,
   transferCoins,
   balance,
@@ -33,10 +31,11 @@ export * from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
 
 // Constants
 // TODO: move this constant in a parameter in the storage, editable by the owner
-export const MIN_BLASTING_AMOUNT: u64 = 10_000_000_000;
+const MIN_BLASTING_AMOUNT: u64 = 10_000_000_000;
 
 const BLASTING_ADDRESS_KEY = stringToBytes('blastingAddress');
 const MAX_BLASTING_AMOUNT: u64 = 1_000_000_000_000_000;
+const totalBlastingAmountKey = stringToBytes('TotalBlastingAmount');
 
 /**
  * This function is meant to be called only one time: when the contract is deployed.
@@ -211,11 +210,10 @@ export function withdraw(_: StaticArray<u8>): StaticArray<u8> {
 
 // read
 export function totalBlastingAmount(_: StaticArray<u8>): StaticArray<u8> {
-  const key = getTotalBlastingAmountKey();
-  if (!Storage.has(key)) {
+  if (!Storage.has(totalBlastingAmountKey)) {
     return u64ToBytes(0);
   }
-  return Storage.get(key);
+  return Storage.get(totalBlastingAmountKey);
 }
 
 export function withdrawable(binaryArgs: StaticArray<u8>): StaticArray<u8> {
@@ -251,30 +249,24 @@ export function getBlastingAddress(_: StaticArray<u8>): StaticArray<u8> {
 
 // internal functions
 function increaseTotalBlastingAmount(amount: u64): void {
-  const key = getTotalBlastingAmountKey();
-  if (!Storage.has(key)) {
-    Storage.set(key, u64ToBytes(0));
+  if (!Storage.has(totalBlastingAmountKey)) {
+    Storage.set(totalBlastingAmountKey, u64ToBytes(0));
   }
-  const currentAmount = bytesToU64(Storage.get(key));
+  const currentAmount = bytesToU64(Storage.get(totalBlastingAmountKey));
   const newAmount = currentAmount + amount;
   if (newAmount > MAX_BLASTING_AMOUNT) {
     throw new Error('Exceeding max blasting amount');
   }
-  Storage.set(key, u64ToBytes(newAmount));
+  Storage.set(totalBlastingAmountKey, u64ToBytes(newAmount));
 }
 
 function decreaseTotalBlastingAmount(amount: u64): void {
-  const key = getTotalBlastingAmountKey();
-  const currentAmount = bytesToU64(Storage.get(key));
+  const currentAmount = bytesToU64(Storage.get(totalBlastingAmountKey));
   if (currentAmount < amount) {
     throw new Error('Not enough total blasting amount to decrease');
   }
   const newAmount = currentAmount - amount;
-  Storage.set(key, u64ToBytes(newAmount));
-}
-
-function getTotalBlastingAmountKey(): StaticArray<u8> {
-  return stringToBytes('TotalBlastingAmount');
+  Storage.set(totalBlastingAmountKey, u64ToBytes(newAmount));
 }
 
 function blastingSessionKeyOf(userAddress: Address): StaticArray<u8> {
