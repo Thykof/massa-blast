@@ -6,15 +6,15 @@ import {
 } from '@massalabs/as-types';
 import {
   constructor,
-  getStackingAddress,
+  getBlastingAddress,
   deposit,
-  stackingSessionOf,
+  blastingSessionOf,
   requestWithdraw,
   setWithdrawableFor,
   ownerAddress,
   withdrawable,
   withdraw,
-} from '../contracts/massa-deleg';
+} from '../contracts/massa-blast';
 import {
   Address,
   Context,
@@ -26,7 +26,7 @@ import {
   balanceOf,
   mockOriginOperationId,
 } from '@massalabs/massa-as-sdk';
-import { StackingSession } from '../types/StackingSession';
+import { BlastingSession } from '../types/BlastingSession';
 import { DepositEvent } from '../events/DepositEvent';
 import { WithdrawEvent } from '../events/WithdrawEvent';
 import { SetWithdrawableEvent } from '../events/SetWithdrawableEvent';
@@ -38,7 +38,7 @@ const contractAddress = new Address(
 const adminAddress = new Address(
   'AU1mhPhXCfh8afoNnbW91bXUVAmu8wU7u8v54yNTMvY7E52KBbz3',
 );
-const stackingAddress = new Address(
+const blastingAddress = new Address(
   'AS12BqZEQ6sByhRLyEuf0YbQmcF2PsDdkNNG1akBJu9XcjZA1e1',
 );
 const userAddress = new Address(
@@ -56,7 +56,7 @@ beforeEach(() => {
   resetStorage();
   mockAdminContext(true);
   switchUser(adminAddress);
-  constructor(new Args().add(stackingAddress).serialize());
+  constructor(new Args().add(blastingAddress).serialize());
 
   mockAdminContext(false);
   switchUser(userAddress);
@@ -74,10 +74,10 @@ describe('constructor', () => {
     mockAdminContext(true);
     switchUser(adminAddress);
     expect(
-      constructor(new Args().add(stackingAddress).serialize()),
+      constructor(new Args().add(blastingAddress).serialize()),
     ).toStrictEqual([]);
-    expect(getStackingAddress([])).toStrictEqual(
-      new Args().add(stackingAddress).serialize(),
+    expect(getBlastingAddress([])).toStrictEqual(
+      new Args().add(blastingAddress).serialize(),
     );
     expect(ownerAddress([])).toStrictEqual(
       stringToBytes(adminAddress.toString()),
@@ -86,19 +86,19 @@ describe('constructor', () => {
 });
 
 describe('deposit', () => {
-  test('error: minimum stacking amount', () => {
+  test('error: minimum blasting amount', () => {
     mockTransferredCoins(200);
     expect(() => {
       deposit([]);
     }).toThrow();
   });
-  test('error: minimum stacking amount, limit', () => {
+  test('error: minimum blasting amount, limit', () => {
     mockTransferredCoins(9_999_999_999);
     expect(() => {
       deposit([]);
     }).toThrow();
   });
-  throws('Stacking session already exists', () => {
+  throws('Blasting session already exists', () => {
     const amount = 10_000_000_000;
     mockTransferredCoins(amount);
     deposit([]);
@@ -108,26 +108,26 @@ describe('deposit', () => {
     const amount = 10_000_000_000;
     mockTransferredCoins(amount);
     const result = deposit([]);
-    const data = stackingSessionOf(new Args().add(userAddress).serialize());
-    const stackingSession = new Args(data)
-      .nextSerializable<StackingSession>()
+    const data = blastingSessionOf(new Args().add(userAddress).serialize());
+    const blastingSession = new Args(data)
+      .nextSerializable<BlastingSession>()
       .unwrap();
-    expect(Context.timestamp() - stackingSession.startTimestamp).toBeLessThan(
+    expect(Context.timestamp() - blastingSession.startTimestamp).toBeLessThan(
       2,
     );
-    expect(stackingSession.amount).toStrictEqual(amount);
-    expect(stackingSession.userAddress).toStrictEqual(userAddress);
+    expect(blastingSession.amount).toStrictEqual(amount);
+    expect(blastingSession.userAddress).toStrictEqual(userAddress);
     const resultEvent = new Args(result)
       .nextSerializable<DepositEvent>()
       .unwrap();
     expect(resultEvent.amount).toStrictEqual(amount);
     expect(resultEvent.userAddress).toStrictEqual(userAddress);
-    expect(resultEvent.timestamp).toStrictEqual(stackingSession.startTimestamp);
+    expect(resultEvent.timestamp).toStrictEqual(blastingSession.startTimestamp);
   });
 });
 
 describe('requestWithdraw', () => {
-  throws('No stacking session found for the caller', () => {
+  throws('No blasting session found for the caller', () => {
     requestWithdraw([]);
   });
   throws('Withdraw request already exists for this user', () => {
@@ -275,7 +275,7 @@ describe('setWithdrawableFor', () => {
     switchUser(userAddress);
     expect(() => {
       requestWithdraw([]);
-    }).toThrow('should fail with: No stacking session found for the caller');
+    }).toThrow('should fail with: No blasting session found for the caller');
   });
 
   test('owner', () => {
@@ -407,9 +407,9 @@ describe('withdraw', () => {
   });
 });
 
-describe('stackingSessionOf', () => {
+describe('blastingSessionOf', () => {
   test('random address', () => {
-    const data = stackingSessionOf(
+    const data = blastingSessionOf(
       new Args().add(generateDumbAddress()).serialize(),
     );
     expect(data).toStrictEqual([]);

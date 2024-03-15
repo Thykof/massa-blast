@@ -1,7 +1,7 @@
 import { Address } from '@massalabs/massa-as-sdk';
 import { Args, Serializable, Result } from '@massalabs/as-types';
 
-export class StackingSession implements Serializable {
+export class BlastingSession implements Serializable {
   constructor(
     public startTimestamp: u64 = 0,
     public amount: u64 = 0,

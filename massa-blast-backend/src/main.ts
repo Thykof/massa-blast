@@ -10,7 +10,7 @@ async function bootstrap() {
   const loggerTransports: winston.transport[] = [
     new winston.transports.Console({ level: 'info' }),
     new winston.transports.File({
-      filename: 'logs/massa-deleg-backend.log',
+      filename: 'logs/massa-blast-backend.log',
       maxsize: 10000000,
       maxFiles: 10,
       tailable: true,
@@ -23,7 +23,7 @@ async function bootstrap() {
       format: winston.format.combine(
         winston.format.timestamp(),
         winston.format.ms(),
-        nestWinstonModuleUtilities.format.nestLike('massa-deleg', {
+        nestWinstonModuleUtilities.format.nestLike('massa-blast', {
           prettyPrint: true,
           colors: true,
         }),

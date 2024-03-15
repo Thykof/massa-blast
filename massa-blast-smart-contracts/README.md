@@ -1,4 +1,4 @@
-# My Massa Smart-contract Project
+# MassaBlast Smart Contracts
 
 ## Build
 

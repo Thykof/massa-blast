@@ -23,7 +23,7 @@ import {
   setOwner,
 } from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
 
-import { StackingSession } from '../types/StackingSession';
+import { BlastingSession } from '../types/BlastingSession';
 import { DepositEvent } from '../events/DepositEvent';
 import { WithdrawEvent } from '../events/WithdrawEvent';
 import { SetWithdrawableEvent } from '../events/SetWithdrawableEvent';
@@ -35,7 +35,7 @@ export * from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
 // TODO: move this constant in a parameter in the storage, editable by the owner
 export const MIN_STACKING_AMOUNT: u64 = 10_000_000_000;
 
-const STACKING_ADDRESS_KEY = stringToBytes('stackingAddress');
+const STACKING_ADDRESS_KEY = stringToBytes('blastingAddress');
 
 /**
  * This function is meant to be called only one time: when the contract is deployed.
@@ -51,15 +51,15 @@ export function constructor(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   setOwner(new Args().add(Context.caller()).serialize());
 
   const args = new Args(binaryArgs);
-  const stackingAddress = args
+  const blastingAddress = args
     .nextSerializable<Address>()
-    .expect('stackingAddress argument is missing or invalid');
-  Storage.set(STACKING_ADDRESS_KEY, stackingAddress.serialize());
+    .expect('blastingAddress argument is missing or invalid');
+  Storage.set(STACKING_ADDRESS_KEY, blastingAddress.serialize());
   generateEvent(
     'Deployed, owner set to ' +
       Context.caller().toString() +
-      'StackingAddress set to ' +
-      stackingAddress.toString(),
+      'BlastingAddress set to ' +
+      blastingAddress.toString(),
   );
   return [];
 }
@@ -80,10 +80,10 @@ export function deposit(_: StaticArray<u8>): StaticArray<u8> {
   const startTimestamp = Context.timestamp();
   const caller = Context.caller();
 
-  const stackingSession = new StackingSession(startTimestamp, amount, caller);
-  const keyStackingSession = stackingSessionKeyOf(caller);
-  assert(!Storage.has(keyStackingSession), 'Stacking session already exists.');
-  Storage.set(keyStackingSession, stackingSession.serialize());
+  const blastingSession = new BlastingSession(startTimestamp, amount, caller);
+  const keyBlastingSession = blastingSessionKeyOf(caller);
+  assert(!Storage.has(keyBlastingSession), 'Blasting session already exists.');
+  Storage.set(keyBlastingSession, blastingSession.serialize());
 
   // assert that the caller sent enough coins for the storage fees and the amount to be set as withdrawable
   consolidatePayment(initialSCBalance, 0, 0, 0, amount);
@@ -104,10 +104,10 @@ export function requestWithdraw(_: StaticArray<u8>): StaticArray<u8> {
     opId = 'O1LNr9xyL9fVHbUvZao4jy6t2Pj5UPtLP0x1fxvS6SD7dPb5S52';
   }
 
-  const keyStackingSession = stackingSessionKeyOf(caller);
+  const keyBlastingSession = blastingSessionKeyOf(caller);
   assert(
-    Storage.has(keyStackingSession),
-    'No stacking session found for the caller.',
+    Storage.has(keyBlastingSession),
+    'No blasting session found for the caller.',
   );
 
   const keyWithdrawRequest = withdrawRequestKey(caller);
@@ -166,7 +166,7 @@ export function withdraw(_: StaticArray<u8>): StaticArray<u8> {
   const caller = Context.caller();
 
   const keyWithdrawable = withdrawableKeyOf(caller);
-  const keyStackingSession = stackingSessionKeyOf(caller);
+  const keyBlastingSession = blastingSessionKeyOf(caller);
   const keyWithdrawRequest = withdrawRequestKey(caller);
   assert(
     Storage.has(keyWithdrawable),
@@ -186,7 +186,7 @@ export function withdraw(_: StaticArray<u8>): StaticArray<u8> {
   transferCoins(caller, amountWithdrawable);
 
   Storage.del(keyWithdrawable);
-  Storage.del(keyStackingSession);
+  Storage.del(keyBlastingSession);
   Storage.del(keyWithdrawRequest);
 
   consolidatePayment(initialSCBalance, 0, amountWithdrawable, 0, 0);
@@ -215,27 +215,27 @@ export function withdrawable(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   return amountWithdrawableBytes;
 }
 
-export function stackingSessionOf(
+export function blastingSessionOf(
   binaryArgs: StaticArray<u8>,
 ): StaticArray<u8> {
   const args = new Args(binaryArgs);
   const userAddress = args
     .nextSerializable<Address>()
     .expect('userAddress argument is missing or invalid');
-  const keyStackingSession = stackingSessionKeyOf(userAddress);
-  if (!Storage.has(keyStackingSession)) {
+  const keyBlastingSession = blastingSessionKeyOf(userAddress);
+  if (!Storage.has(keyBlastingSession)) {
     return [];
   }
-  return Storage.get(keyStackingSession);
+  return Storage.get(keyBlastingSession);
 }
 
-export function getStackingAddress(_: StaticArray<u8>): StaticArray<u8> {
+export function getBlastingAddress(_: StaticArray<u8>): StaticArray<u8> {
   return Storage.get(STACKING_ADDRESS_KEY);
 }
 
 // internal functions
-function stackingSessionKeyOf(userAddress: Address): StaticArray<u8> {
-  return stringToBytes('StackingSession_' + userAddress.toString());
+function blastingSessionKeyOf(userAddress: Address): StaticArray<u8> {
+  return stringToBytes('BlastingSession_' + userAddress.toString());
 }
 
 function withdrawableKeyOf(userAddress: Address): StaticArray<u8> {
