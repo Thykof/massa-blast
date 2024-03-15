@@ -15,6 +15,7 @@ import {
   withdrawable,
   withdraw,
   totalBlastingAmount,
+  getWithdrawRequests,
 } from '../contracts/massa-blast';
 import {
   Address,
@@ -290,6 +291,11 @@ describe('setWithdrawableFor', () => {
     mockTransferredCoins(0);
     // User requests a withdraw
     requestWithdraw([]);
+    /// assert that the withdraw request is set
+    let withdrawRequests = new Args(getWithdrawRequests([]))
+      .nextSerializableObjectArray<Address>()
+      .unwrap();
+    expect(withdrawRequests.length).toStrictEqual(1);
     // admin send coins to withdraw
     switchUser(adminAddress);
     mockTransferredCoins(amountDeposit);
@@ -298,6 +304,11 @@ describe('setWithdrawableFor', () => {
     );
     mockBalance(contractAddress.toString(), amountDeposit);
     mockTransferredCoins(0);
+    /// assert that the withdraw request is removed
+    withdrawRequests = new Args(getWithdrawRequests([]))
+      .nextSerializableObjectArray<Address>()
+      .unwrap();
+    expect(withdrawRequests.length).toStrictEqual(0);
     // User can't requests a withdraw as second time
     switchUser(userAddress);
     expect(() => {
@@ -333,11 +344,66 @@ describe('setWithdrawableFor', () => {
           .serialize(),
       );
     }).toThrow('should fail with: No withdraw request for this user');
+    mockTransferredCoins(0);
     // User can't ask for withdraw if no deposit
     switchUser(userAddress);
     expect(() => {
       requestWithdraw([]);
     }).toThrow('should fail with: No blasting session found for the caller');
+
+    // User deposit 1
+    mockTransferredCoins(amountDeposit);
+    deposit(new Args().add(amountDeposit).serialize());
+    mockTransferredCoins(0);
+    // User requests a withdraw
+    requestWithdraw([]);
+    /// assert that the withdraw request is set
+    withdrawRequests = new Args(getWithdrawRequests([]))
+      .nextSerializableObjectArray<Address>()
+      .unwrap();
+    expect(withdrawRequests.length).toStrictEqual(1);
+    // User deposit 2
+    switchUser(userAddress2);
+    mockTransferredCoins(amountDeposit);
+    deposit(new Args().add(amountDeposit).serialize());
+    mockTransferredCoins(0);
+    // User requests a withdraw
+    requestWithdraw([]);
+    /// assert that the withdraw request is set
+    withdrawRequests = new Args(getWithdrawRequests([]))
+      .nextSerializableObjectArray<Address>()
+      .unwrap();
+    expect(withdrawRequests.length).toStrictEqual(2);
+    // admin send coins to withdraw for user 2
+    switchUser(adminAddress);
+    mockTransferredCoins(amountDeposit);
+    setWithdrawableFor(
+      new Args()
+        .add(userAddress2)
+        .add(opId)
+        .add(u64(amountDeposit))
+        .serialize(),
+    );
+    mockBalance(contractAddress.toString(), amountDeposit);
+    mockTransferredCoins(0);
+    /// assert that the withdraw request is removed
+    withdrawRequests = new Args(getWithdrawRequests([]))
+      .nextSerializableObjectArray<Address>()
+      .unwrap();
+    expect(withdrawRequests.length).toStrictEqual(1);
+    // admin send coins to withdraw for user 1
+    switchUser(adminAddress);
+    mockTransferredCoins(amountDeposit);
+    setWithdrawableFor(
+      new Args().add(userAddress).add(opId).add(u64(amountDeposit)).serialize(),
+    );
+    mockBalance(contractAddress.toString(), amountDeposit);
+    mockTransferredCoins(0);
+    /// assert that the withdraw request is removed
+    withdrawRequests = new Args(getWithdrawRequests([]))
+      .nextSerializableObjectArray<Address>()
+      .unwrap();
+    expect(withdrawRequests.length).toStrictEqual(0);
   });
 
   test('owner', () => {

@@ -36,6 +36,7 @@ const MIN_BLASTING_AMOUNT: u64 = 10_000_000_000;
 const BLASTING_ADDRESS_KEY = stringToBytes('blastingAddress');
 const MAX_BLASTING_AMOUNT: u64 = 1_000_000_000_000_000;
 const totalBlastingAmountKey = stringToBytes('TotalBlastingAmount');
+const withdrawRequestListKey = stringToBytes('WithdrawRequestList');
 
 /**
  * This function is meant to be called only one time: when the contract is deployed.
@@ -101,12 +102,6 @@ export function requestWithdraw(_: StaticArray<u8>): StaticArray<u8> {
   const initialSCBalance = balance();
   const caller = Context.caller();
 
-  let opId = getOriginOperationId();
-  if (opId === null) {
-    // Fake an operation ID for the execute_read_only_call
-    opId = 'O1LNr9xyL9fVHbUvZao4jy6t2Pj5UPtLP0x1fxvS6SD7dPb5S52';
-  }
-
   const keyBlastingSession = blastingSessionKeyOf(caller);
   assert(
     Storage.has(keyBlastingSession),
@@ -116,12 +111,7 @@ export function requestWithdraw(_: StaticArray<u8>): StaticArray<u8> {
     .nextSerializable<BlastingSession>()
     .expect('Blasting session is invalid');
 
-  const keyWithdrawRequest = withdrawRequestKey(caller);
-  assert(
-    !Storage.has(keyWithdrawRequest),
-    'Withdraw request already exists for this user.',
-  );
-  Storage.set(keyWithdrawRequest, stringToBytes(opId));
+  addWithdrawRequest(caller);
   decreaseTotalBlastingAmount(blastingSession.amount);
 
   consolidatePayment(initialSCBalance, 0, 0, 0, 0);
@@ -147,12 +137,7 @@ export function setWithdrawableFor(
     .expect('operationId argument is missing');
   const amount = args.nextU64().expect('amount argument is missing');
 
-  const keyWithdrawRequest = withdrawRequestKey(userAddress);
-  assert(Storage.has(keyWithdrawRequest), 'No withdraw request for this user.');
-  assert(
-    bytesToString(Storage.get(keyWithdrawRequest)) === operationId,
-    'operationId does not match the withdraw request.',
-  );
+  removeWithdrawRequest(userAddress, operationId);
 
   assert(amount > 0, 'Amount must be greater than 0.');
   const keyWithdrawable = withdrawableKeyOf(userAddress);
@@ -174,7 +159,6 @@ export function withdraw(_: StaticArray<u8>): StaticArray<u8> {
 
   const keyWithdrawable = withdrawableKeyOf(caller);
   const keyBlastingSession = blastingSessionKeyOf(caller);
-  const keyWithdrawRequest = withdrawRequestKey(caller);
   assert(
     Storage.has(keyWithdrawable),
     'No withdrawable amount for the caller.',
@@ -194,7 +178,6 @@ export function withdraw(_: StaticArray<u8>): StaticArray<u8> {
 
   Storage.del(keyWithdrawable);
   Storage.del(keyBlastingSession);
-  Storage.del(keyWithdrawRequest);
 
   consolidatePayment(initialSCBalance, 0, amountWithdrawable, 0, 0);
 
@@ -214,6 +197,13 @@ export function totalBlastingAmount(_: StaticArray<u8>): StaticArray<u8> {
     return u64ToBytes(0);
   }
   return Storage.get(totalBlastingAmountKey);
+}
+
+export function getWithdrawRequests(_: StaticArray<u8>): StaticArray<u8> {
+  if (!Storage.has(withdrawRequestListKey)) {
+    return [];
+  }
+  return Storage.get(withdrawRequestListKey);
 }
 
 export function withdrawable(binaryArgs: StaticArray<u8>): StaticArray<u8> {
@@ -248,6 +238,71 @@ export function getBlastingAddress(_: StaticArray<u8>): StaticArray<u8> {
 }
 
 // internal functions
+function addWithdrawRequest(caller: Address): void {
+  let opId = getOriginOperationId();
+  if (opId === null) {
+    // Fake an operation ID for the execute_read_only_call
+    opId = 'O1LNr9xyL9fVHbUvZao4jy6t2Pj5UPtLP0x1fxvS6SD7dPb5S52';
+  }
+
+  const keyWithdrawRequest = withdrawRequestKey(caller);
+  assert(
+    !Storage.has(keyWithdrawRequest),
+    'Withdraw request already exists for this user.',
+  );
+  Storage.set(keyWithdrawRequest, stringToBytes(opId));
+  pushWithdrawRequest(caller);
+}
+
+function pushWithdrawRequest(caller: Address): void {
+  if (!Storage.has(withdrawRequestListKey)) {
+    Storage.set(
+      withdrawRequestListKey,
+      new Args().addSerializableObjectArray<Address>([caller]).serialize(),
+    );
+  } else {
+    const withdrawRequestList = new Args(Storage.get(withdrawRequestListKey))
+      .nextSerializableObjectArray<Address>()
+      .expect('Withdraw request list is invalid');
+    withdrawRequestList.push(caller);
+    Storage.set(
+      withdrawRequestListKey,
+      new Args().addSerializableObjectArray(withdrawRequestList).serialize(),
+    );
+  }
+}
+
+function removeWithdrawRequest(
+  userAddress: Address,
+  operationId: string,
+): void {
+  const keyWithdrawRequest = withdrawRequestKey(userAddress);
+  assert(Storage.has(keyWithdrawRequest), 'No withdraw request for this user.');
+  assert(
+    bytesToString(Storage.get(keyWithdrawRequest)) === operationId,
+    'operationId does not match the withdraw request.',
+  );
+  Storage.del(keyWithdrawRequest);
+  removeWithdrawRequestFromList(userAddress);
+}
+
+function removeWithdrawRequestFromList(userAddress: Address): void {
+  if (!Storage.has(withdrawRequestListKey)) {
+    throw new Error('Withdraw request list is missing');
+  }
+  const withdrawRequestList = new Args(Storage.get(withdrawRequestListKey))
+    .nextSerializableObjectArray<Address>()
+    .expect('Withdraw request list is invalid');
+  const index = withdrawRequestList.indexOf(userAddress);
+  if (index !== -1) {
+    withdrawRequestList.splice(index, 1);
+    Storage.set(
+      withdrawRequestListKey,
+      new Args().addSerializableObjectArray(withdrawRequestList).serialize(),
+    );
+  }
+}
+
 function increaseTotalBlastingAmount(amount: u64): void {
   if (!Storage.has(totalBlastingAmountKey)) {
     Storage.set(totalBlastingAmountKey, u64ToBytes(0));
@@ -261,6 +316,9 @@ function increaseTotalBlastingAmount(amount: u64): void {
 }
 
 function decreaseTotalBlastingAmount(amount: u64): void {
+  if (!Storage.has(totalBlastingAmountKey)) {
+    throw new Error('Total blasting amount is missing');
+  }
   const currentAmount = bytesToU64(Storage.get(totalBlastingAmountKey));
   if (currentAmount < amount) {
     throw new Error('Not enough total blasting amount to decrease');
