@@ -33,9 +33,9 @@ export * from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
 
 // Constants
 // TODO: move this constant in a parameter in the storage, editable by the owner
-export const MIN_STACKING_AMOUNT: u64 = 10_000_000_000;
+export const MIN_BLASTING_AMOUNT: u64 = 10_000_000_000;
 
-const STACKING_ADDRESS_KEY = stringToBytes('blastingAddress');
+const BLASTING_ADDRESS_KEY = stringToBytes('blastingAddress');
 
 /**
  * This function is meant to be called only one time: when the contract is deployed.
@@ -54,7 +54,7 @@ export function constructor(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   const blastingAddress = args
     .nextSerializable<Address>()
     .expect('blastingAddress argument is missing or invalid');
-  Storage.set(STACKING_ADDRESS_KEY, blastingAddress.serialize());
+  Storage.set(BLASTING_ADDRESS_KEY, blastingAddress.serialize());
   generateEvent(
     'Deployed, owner set to ' +
       Context.caller().toString() +
@@ -74,7 +74,7 @@ export function deposit(_: StaticArray<u8>): StaticArray<u8> {
   const initialSCBalance = balance();
   const amount = transferredCoins();
   assert(
-    amount >= MIN_STACKING_AMOUNT,
+    amount >= MIN_BLASTING_AMOUNT,
     'Amount is less than the minimum required.',
   );
   const startTimestamp = Context.timestamp();
@@ -230,7 +230,7 @@ export function blastingSessionOf(
 }
 
 export function getBlastingAddress(_: StaticArray<u8>): StaticArray<u8> {
-  return Storage.get(STACKING_ADDRESS_KEY);
+  return Storage.get(BLASTING_ADDRESS_KEY);
 }
 
 // internal functions
