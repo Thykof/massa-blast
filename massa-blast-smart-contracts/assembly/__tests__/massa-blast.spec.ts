@@ -126,7 +126,7 @@ describe('deposit', () => {
       2,
     );
     expect(blastingSession.amount).toStrictEqual(amountDeposit);
-    expect(blastingSession.userAddress).toStrictEqual(userAddress);
+    expect(blastingSession.userAddress).toStrictEqual(userAddress.toString());
     const resultEvent = new Args(result)
       .nextSerializable<DepositEvent>()
       .unwrap();

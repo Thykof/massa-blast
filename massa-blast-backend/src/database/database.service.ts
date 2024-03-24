@@ -15,7 +15,8 @@ export class DatabaseService {
   async addTotalRolls(totalRolls: number) {
     const totalRollsRecord = new TotalRollsRecord();
     totalRollsRecord.value = totalRolls;
-    totalRollsRecord.createdAt = new Date(); // TODO: get the date just after making the request, and pass it as a parameter
+    // TODO: to improve createAt accuracy we can get the date just after making the request, and pass it as a parameter
+    totalRollsRecord.createdAt = new Date();
 
     await totalRollsRecord.save();
   }

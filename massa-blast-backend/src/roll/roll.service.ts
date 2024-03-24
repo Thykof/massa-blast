@@ -27,7 +27,7 @@ export class RollService {
     this.fetchTotalRolls();
   }
 
-  @Interval(10000)
+  @Interval(10_000)
   async fetchTotalRolls() {
     const stackers = await this.getStakers();
 

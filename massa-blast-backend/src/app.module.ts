@@ -6,6 +6,8 @@ import { DatabaseModule } from './database/database.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { RollModule } from './roll/roll.module';
 import { RewardModule } from './reward/reward.module';
+import { BlasterModule } from './blaster/blaster.module';
+import { ClientModule } from './client/client.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { RewardModule } from './reward/reward.module';
     ScheduleModule.forRoot(),
     RollModule,
     RewardModule,
+    BlasterModule,
+    ClientModule,
   ],
   controllers: [AppController],
   providers: [AppService],

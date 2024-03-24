@@ -1,11 +1,12 @@
-import { Address } from '@massalabs/massa-as-sdk';
 import { Args, Serializable, Result } from '@massalabs/as-types';
 
 export class BlastingSession implements Serializable {
   constructor(
     public startTimestamp: u64 = 0,
     public amount: u64 = 0,
-    public userAddress: Address = new Address(),
+    public userAddress: string = '',
+    public withdrawRequestOpId: string = '',
+    public endTimestamp: u64 = 0,
   ) {}
 
   serialize(): StaticArray<u8> {
@@ -13,6 +14,8 @@ export class BlastingSession implements Serializable {
       .add(this.startTimestamp)
       .add(this.amount)
       .add(this.userAddress)
+      .add(this.withdrawRequestOpId)
+      .add(this.endTimestamp)
       .serialize();
   }
 
@@ -30,15 +33,29 @@ export class BlastingSession implements Serializable {
       return new Result(0, "Can't deserialize amount.");
     }
 
-    const resultUserAddress = args.nextSerializable<Address>();
+    const resultUserAddress = args.nextString();
 
     if (resultUserAddress.isErr()) {
       return new Result(0, "Can't deserialize userAddress.");
     }
 
+    const resultWithdrawRequestOpId = args.nextString();
+
+    if (resultWithdrawRequestOpId.isErr()) {
+      return new Result(0, "Can't deserialize withdrawRequestOpId.");
+    }
+
+    const resultEndTimestamp = args.nextU64();
+
+    if (resultEndTimestamp.isErr()) {
+      return new Result(0, "Can't deserialize endTimestamp.");
+    }
+
     this.startTimestamp = resultStartTimestamp.unwrap();
     this.amount = resultAmount.unwrap();
     this.userAddress = resultUserAddress.unwrap();
+    this.withdrawRequestOpId = resultWithdrawRequestOpId.unwrap();
+    this.endTimestamp = resultEndTimestamp.unwrap();
 
     return new Result(args.offset);
   }

@@ -83,8 +83,12 @@ export function deposit(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   const startTimestamp = Context.timestamp();
   const caller = Context.caller();
 
-  const blastingSession = new BlastingSession(startTimestamp, amount, caller);
-  const keyBlastingSession = blastingSessionKeyOf(caller);
+  const blastingSession = new BlastingSession(
+    startTimestamp,
+    amount,
+    caller.toString(),
+  );
+  const keyBlastingSession = blastingSessionKeyOf(caller.toString());
   assert(!Storage.has(keyBlastingSession), 'Blasting session already exists.');
   Storage.set(keyBlastingSession, new Args().add(blastingSession).serialize());
   increaseTotalBlastingAmount(amount);
@@ -102,7 +106,7 @@ export function requestWithdraw(_: StaticArray<u8>): StaticArray<u8> {
   const initialSCBalance = balance();
   const caller = Context.caller();
 
-  const keyBlastingSession = blastingSessionKeyOf(caller);
+  const keyBlastingSession = blastingSessionKeyOf(caller.toString());
   assert(
     Storage.has(keyBlastingSession),
     'No blasting session found for the caller.',
@@ -111,7 +115,13 @@ export function requestWithdraw(_: StaticArray<u8>): StaticArray<u8> {
     .nextSerializable<BlastingSession>()
     .expect('Blasting session is invalid');
 
-  addWithdrawRequest(caller);
+  let opId = getOriginOperationId();
+  if (opId === null) {
+    // Fake an operation ID for the execute_read_only_call
+    opId = 'O1LNr9xyL9fVHbUvZao4jy6t2Pj5UPtLP0x1fxvS6SD7dPb5S52';
+  }
+  addWithdrawRequest(caller, opId);
+  updateWithdrawRequestOpIdOfBlastingSession(caller, opId);
   decreaseTotalBlastingAmount(blastingSession.amount);
 
   consolidatePayment(initialSCBalance, 0, 0, 0, 0);
@@ -159,7 +169,7 @@ export function withdraw(_: StaticArray<u8>): StaticArray<u8> {
   const caller = Context.caller();
 
   const keyWithdrawable = withdrawableKeyOf(caller);
-  const keyBlastingSession = blastingSessionKeyOf(caller);
+  const keyBlastingSession = blastingSessionKeyOf(caller.toString());
   assert(
     Storage.has(keyWithdrawable),
     'No withdrawable amount for the caller.',
@@ -207,7 +217,7 @@ export function getBlastingSessionsOfPendingWithdrawRequests(
     return [];
   }
   const withdrawRequests = new Args(Storage.get(withdrawRequestListKey))
-    .nextSerializableObjectArray<Address>()
+    .nextStringArray()
     .expect('Withdraw request list is invalid');
   const stackingSessions: BlastingSession[] = [];
   for (let i = 0; i < withdrawRequests.length; i++) {
@@ -251,7 +261,7 @@ export function blastingSessionOf(
   const userAddress = args
     .nextSerializable<Address>()
     .expect('userAddress argument is missing or invalid');
-  const keyBlastingSession = blastingSessionKeyOf(userAddress);
+  const keyBlastingSession = blastingSessionKeyOf(userAddress.toString());
   if (!Storage.has(keyBlastingSession)) {
     return [];
   }
@@ -263,13 +273,27 @@ export function getBlastingAddress(_: StaticArray<u8>): StaticArray<u8> {
 }
 
 // internal functions
-function addWithdrawRequest(caller: Address): void {
-  let opId = getOriginOperationId();
-  if (opId === null) {
-    // Fake an operation ID for the execute_read_only_call
-    opId = 'O1LNr9xyL9fVHbUvZao4jy6t2Pj5UPtLP0x1fxvS6SD7dPb5S52';
+function updateWithdrawRequestOpIdOfBlastingSession(
+  caller: Address,
+  withdrawRequestOpId: string,
+): void {
+  const keyBlastingSession = blastingSessionKeyOf(caller.toString());
+  if (Storage.has(keyBlastingSession)) {
+    const blastingSession = new Args(Storage.get(keyBlastingSession))
+      .nextSerializable<BlastingSession>()
+      .expect('Blasting session is invalid');
+    blastingSession.withdrawRequestOpId = withdrawRequestOpId;
+    blastingSession.endTimestamp = Context.timestamp();
+    Storage.set(
+      keyBlastingSession,
+      new Args().add(blastingSession).serialize(),
+    );
+  } else {
+    throw new Error('No blasting session found for the caller.');
   }
+}
 
+function addWithdrawRequest(caller: Address, opId: string): void {
   const keyWithdrawRequest = withdrawRequestKey(caller);
   assert(
     !Storage.has(keyWithdrawRequest),
@@ -283,16 +307,16 @@ function pushWithdrawRequest(caller: Address): void {
   if (!Storage.has(withdrawRequestListKey)) {
     Storage.set(
       withdrawRequestListKey,
-      new Args().addSerializableObjectArray<Address>([caller]).serialize(),
+      new Args().add([caller.toString()]).serialize(),
     );
   } else {
     const withdrawRequestList = new Args(Storage.get(withdrawRequestListKey))
-      .nextSerializableObjectArray<Address>()
+      .nextStringArray()
       .expect('Withdraw request list is invalid');
-    withdrawRequestList.push(caller);
+    withdrawRequestList.push(caller.toString());
     Storage.set(
       withdrawRequestListKey,
-      new Args().addSerializableObjectArray(withdrawRequestList).serialize(),
+      new Args().add(withdrawRequestList).serialize(),
     );
   }
 }
@@ -316,14 +340,14 @@ function removeWithdrawRequestFromList(userAddress: Address): void {
     throw new Error('Withdraw request list is missing');
   }
   const withdrawRequestList = new Args(Storage.get(withdrawRequestListKey))
-    .nextSerializableObjectArray<Address>()
+    .nextStringArray()
     .expect('Withdraw request list is invalid');
-  const index = withdrawRequestList.indexOf(userAddress);
+  const index = withdrawRequestList.indexOf(userAddress.toString());
   if (index !== -1) {
     withdrawRequestList.splice(index, 1);
     Storage.set(
       withdrawRequestListKey,
-      new Args().addSerializableObjectArray(withdrawRequestList).serialize(),
+      new Args().add(withdrawRequestList).serialize(),
     );
   }
 }
@@ -352,8 +376,8 @@ function decreaseTotalBlastingAmount(amount: u64): void {
   Storage.set(totalBlastingAmountKey, u64ToBytes(newAmount));
 }
 
-function blastingSessionKeyOf(userAddress: Address): StaticArray<u8> {
-  return stringToBytes('BlastingSession_' + userAddress.toString());
+function blastingSessionKeyOf(userAddress: string): StaticArray<u8> {
+  return stringToBytes('BlastingSession_' + userAddress);
 }
 
 function withdrawableKeyOf(userAddress: Address): StaticArray<u8> {
