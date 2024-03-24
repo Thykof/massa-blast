@@ -142,6 +142,7 @@ export function setWithdrawableFor(
   assert(amount > 0, 'Amount must be greater than 0.');
   const keyWithdrawable = withdrawableKeyOf(userAddress);
   assert(!Storage.has(keyWithdrawable), 'Withdrawable amount already set.');
+  // TODO: insert here multisig check
   Storage.set(keyWithdrawable, u64ToBytes(amount));
 
   // assert that the caller sent enough coins for the storage fees and the amount to be set as withdrawable
@@ -197,6 +198,30 @@ export function totalBlastingAmount(_: StaticArray<u8>): StaticArray<u8> {
     return u64ToBytes(0);
   }
   return Storage.get(totalBlastingAmountKey);
+}
+
+export function getBlastingSessionsOfPendingWithdrawRequests(
+  _: StaticArray<u8>,
+): StaticArray<u8> {
+  if (!Storage.has(withdrawRequestListKey)) {
+    return [];
+  }
+  const withdrawRequests = new Args(Storage.get(withdrawRequestListKey))
+    .nextSerializableObjectArray<Address>()
+    .expect('Withdraw request list is invalid');
+  const stackingSessions: BlastingSession[] = [];
+  for (let i = 0; i < withdrawRequests.length; i++) {
+    const keyBlastingSession = blastingSessionKeyOf(withdrawRequests[i]);
+    if (Storage.has(keyBlastingSession)) {
+      stackingSessions.push(
+        new Args(Storage.get(keyBlastingSession))
+          .nextSerializable<BlastingSession>()
+          .expect('Blasting session is invalid at index ' + i.toString()),
+      );
+    }
+  }
+
+  return new Args().addSerializableObjectArray(stackingSessions).serialize();
 }
 
 export function getWithdrawRequests(_: StaticArray<u8>): StaticArray<u8> {

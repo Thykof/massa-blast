@@ -16,6 +16,7 @@ import {
   withdraw,
   totalBlastingAmount,
   getWithdrawRequests,
+  getBlastingSessionsOfPendingWithdrawRequests,
 } from '../contracts/massa-blast';
 import {
   Address,
@@ -374,6 +375,12 @@ describe('setWithdrawableFor', () => {
       .nextSerializableObjectArray<Address>()
       .unwrap();
     expect(withdrawRequests.length).toStrictEqual(2);
+    const blastingSessions = new Args(
+      getBlastingSessionsOfPendingWithdrawRequests([]),
+    )
+      .nextSerializableObjectArray<BlastingSession>()
+      .expect('should be a list of blasting sessions');
+    expect(blastingSessions.length).toStrictEqual(2);
     // admin send coins to withdraw for user 2
     switchUser(adminAddress);
     mockTransferredCoins(amountDeposit);
