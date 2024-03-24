@@ -106,22 +106,16 @@ export function requestWithdraw(_: StaticArray<u8>): StaticArray<u8> {
   const initialSCBalance = balance();
   const caller = Context.caller();
 
-  const keyBlastingSession = blastingSessionKeyOf(caller.toString());
-  assert(
-    Storage.has(keyBlastingSession),
-    'No blasting session found for the caller.',
-  );
-  const blastingSession = new Args(Storage.get(keyBlastingSession))
-    .nextSerializable<BlastingSession>()
-    .expect('Blasting session is invalid');
-
-  let opId = getOriginOperationId();
-  if (opId === null) {
+  let withdrawRequestOpId = getOriginOperationId();
+  if (withdrawRequestOpId === null) {
     // Fake an operation ID for the execute_read_only_call
-    opId = 'O1LNr9xyL9fVHbUvZao4jy6t2Pj5UPtLP0x1fxvS6SD7dPb5S52';
+    withdrawRequestOpId = 'O1LNr9xyL9fVHbUvZao4jy6t2Pj5UPtLP0x1fxvS6SD7dPb5S52';
   }
-  addWithdrawRequest(caller, opId);
-  updateWithdrawRequestOpIdOfBlastingSession(caller, opId);
+  const blastingSession = updateWithdrawRequestOpIdOfBlastingSession(
+    caller,
+    withdrawRequestOpId,
+  );
+  addWithdrawRequest(caller, withdrawRequestOpId);
   decreaseTotalBlastingAmount(blastingSession.amount);
 
   consolidatePayment(initialSCBalance, 0, 0, 0, 0);
@@ -276,21 +270,20 @@ export function getBlastingAddress(_: StaticArray<u8>): StaticArray<u8> {
 function updateWithdrawRequestOpIdOfBlastingSession(
   caller: Address,
   withdrawRequestOpId: string,
-): void {
+): BlastingSession {
   const keyBlastingSession = blastingSessionKeyOf(caller.toString());
-  if (Storage.has(keyBlastingSession)) {
-    const blastingSession = new Args(Storage.get(keyBlastingSession))
-      .nextSerializable<BlastingSession>()
-      .expect('Blasting session is invalid');
-    blastingSession.withdrawRequestOpId = withdrawRequestOpId;
-    blastingSession.endTimestamp = Context.timestamp();
-    Storage.set(
-      keyBlastingSession,
-      new Args().add(blastingSession).serialize(),
-    );
-  } else {
-    throw new Error('No blasting session found for the caller.');
-  }
+  assert(
+    Storage.has(keyBlastingSession),
+    'No blasting session found for the caller.',
+  );
+  const blastingSession = new Args(Storage.get(keyBlastingSession))
+    .nextSerializable<BlastingSession>()
+    .expect('Blasting session is invalid');
+  blastingSession.withdrawRequestOpId = withdrawRequestOpId;
+  blastingSession.endTimestamp = Context.timestamp();
+  Storage.set(keyBlastingSession, new Args().add(blastingSession).serialize());
+
+  return blastingSession;
 }
 
 function addWithdrawRequest(caller: Address, opId: string): void {

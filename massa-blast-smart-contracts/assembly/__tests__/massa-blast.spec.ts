@@ -125,6 +125,7 @@ describe('deposit', () => {
     expect(Context.timestamp() - blastingSession.startTimestamp).toBeLessThan(
       2,
     );
+    expect(blastingSession.withdrawRequestOpId).toStrictEqual('');
     expect(blastingSession.amount).toStrictEqual(amountDeposit);
     expect(blastingSession.userAddress).toStrictEqual(userAddress.toString());
     const resultEvent = new Args(result)
@@ -169,12 +170,19 @@ describe('requestWithdraw', () => {
     deposit(new Args().add(amountDeposit).serialize());
     mockTransferredCoins(0);
     // user requests a withdraw
+    mockOriginOperationId(opId);
     const result = requestWithdraw([]);
     const resultEvent = new Args(result)
       .nextSerializable<WithdrawEvent>()
       .unwrap();
     // assert
     expect(resultEvent.userAddress).toStrictEqual(userAddress);
+    const data = blastingSessionOf(new Args().add(userAddress).serialize());
+    const blastingSession = new Args(data)
+      .nextSerializable<BlastingSession>()
+      .unwrap();
+    expect(blastingSession.withdrawRequestOpId).toStrictEqual(opId);
+    expect(Context.timestamp() - blastingSession.endTimestamp).toBeLessThan(2);
   });
 });
 
