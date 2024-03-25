@@ -59,7 +59,7 @@ export function constructor(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   generateEvent(
     'Deployed, owner set to ' +
       Context.caller().toString() +
-      'BlastingAddress set to ' +
+      ' BlastingAddress set to ' +
       blastingAddress.toString(),
   );
   return [];

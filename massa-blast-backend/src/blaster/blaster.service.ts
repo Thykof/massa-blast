@@ -17,6 +17,10 @@ export class BlasterService {
 
   constructor(private clientService: ClientService) {}
 
+  public async onModuleInit(): Promise<void> {
+    await this.blast();
+  }
+
   @Interval(10_000)
   async blast() {
     this.logger.log('Blasting...');
@@ -35,10 +39,10 @@ export class BlasterService {
       (acc, curr) => acc + curr.amount,
       0n,
     );
-    this.logger.log('Pending withdraw amount:', pendingWithdrawAmount);
+    this.logger.log(`Pending withdraw amount: ${pendingWithdrawAmount}`);
 
     const balance = await this.clientService.getBalance(this.nodeAddress);
-    this.logger.log('Balance:', balance);
+    this.logger.log(`Balance: ${balance}`);
 
     // sort to distribute first the oldest sessions
     const sortedSessions = sessions.sort((a, b) => {
@@ -72,8 +76,8 @@ export class BlasterService {
       remainingToDistribute -= session.amount;
     }
 
-    this.logger.log('Remaining balance:', remainingBalance);
-    this.logger.log('Remaining to distribute:', remainingToDistribute);
+    this.logger.log(`Remaining balance: ${remainingBalance}`);
+    this.logger.log(`Remaining to distribute: ${remainingToDistribute}`);
 
     return {
       remainingBalance,
@@ -89,10 +93,10 @@ export class BlasterService {
     const deferredCredit = await this.clientService.getAllDeferredCredits(
       this.nodeAddress,
     );
-    this.logger.log('Deferred credit:', deferredCredit);
+    this.logger.log(`Deferred credit: ${deferredCredit}`);
 
     const totalFutureBalance = remainingBalance + deferredCredit;
-    this.logger.log('Total future balance:', totalFutureBalance);
+    this.logger.log(`Total future balance: ${totalFutureBalance}`);
 
     // 4. Is sum of deferred credit is bellow sum of remaining amount to distribute, sell rolls
     if (totalFutureBalance < remainingToDistribute) {
@@ -114,13 +118,13 @@ export class BlasterService {
       totalFutureBalance,
       remainingToDistribute,
     );
-    this.logger.log('Selling', rollAmount, 'rolls');
+    this.logger.log(`Selling ${rollAmount} roll(s)`);
     await this.clientService.sellRolls(rollAmount);
   }
 
   private async buyRolls(remainingBalance: bigint) {
     const rollAmount = remainingBalance / rollValue;
-    this.logger.log('Buying', rollAmount, 'rolls');
+    this.logger.log(`Buying ${rollAmount} roll(s)`);
     await this.clientService.buyRolls(rollAmount);
   }
 

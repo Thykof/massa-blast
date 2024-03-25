@@ -1,6 +1,5 @@
 import {
   Args,
-  ArrayTypes,
   Client,
   fromMAS,
   IAddressInfo,
@@ -24,7 +23,7 @@ export class ClientService {
 
   public async onModuleInit(): Promise<void> {
     const adminAccount = await WalletClient.getAccountFromSecretKey(
-      process.env.MASSA_PK,
+      process.env.NODE_PK,
     );
 
     const clientConfig = {
@@ -58,10 +57,11 @@ export class ClientService {
   public async getBalance(address: string): Promise<bigint> {
     const res = await this.getAddress(address);
     if (!res) {
+      this.logger.error(`Address ${address} not found`);
       return 0n;
     }
 
-    return fromMAS(res[0].final_balance);
+    return fromMAS(res.final_balance);
   }
 
   public async getAllDeferredCredits(address: string): Promise<bigint> {
@@ -87,6 +87,11 @@ export class ClientService {
     });
 
     const args = new Args(res.returnValue);
+    if (args.serialize().length === 0) {
+      // TODO: args.serialize() should contains at least the length of the array, u32
+      // maybe there is a bug...
+      return [];
+    }
     return args.nextSerializableObjectArray<BlastingSession>(BlastingSession);
   }
 
@@ -108,24 +113,26 @@ export class ClientService {
   }
 
   public async sellRolls(rollAmount: bigint): Promise<void> {
-    await this.client.wallet().sellRolls({
+    const opId = await this.client.wallet().sellRolls({
       fee: this.defaultFees,
       amount: rollAmount,
     });
+    this.logger.log(`sellRolls operation ID: ${opId}`);
   }
 
   public async buyRolls(rollAmount: bigint): Promise<void> {
-    await this.client.wallet().buyRolls({
+    const opId = await this.client.wallet().buyRolls({
       fee: this.defaultFees,
       amount: rollAmount,
     });
+    this.logger.log(`buyRolls operation ID: ${opId}`);
   }
 
-  private async getAddress(address: string): Promise<IAddressInfo | null> {
+  private async getAddress(address: string): Promise<IAddressInfo | undefined> {
     const res = await this.client.publicApi().getAddresses([address]);
     if (res.length === 0) {
       this.logger.error(`Address ${address} not found`);
-      return null;
+      return undefined;
     }
     return res[0];
   }
