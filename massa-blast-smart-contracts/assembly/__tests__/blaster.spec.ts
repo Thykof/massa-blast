@@ -17,7 +17,7 @@ import {
   totalBlastingAmount,
   getWithdrawRequests,
   getBlastingSessionsOfPendingWithdrawRequests,
-} from '../contracts/massa-blast';
+} from '../contracts/blaster';
 import {
   Address,
   Context,
