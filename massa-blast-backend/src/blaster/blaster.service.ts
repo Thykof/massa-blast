@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Interval } from '@nestjs/schedule';
 import { ClientService } from '../client/client.service';
 import { BlastingSession } from '../client/types/BlastingSession';
 
@@ -17,11 +16,6 @@ export class BlasterService {
 
   constructor(private clientService: ClientService) {}
 
-  public async onModuleInit(): Promise<void> {
-    await this.blast();
-  }
-
-  @Interval(10_000)
   async blast() {
     this.logger.log('Blasting...');
     // 1. Sum up all the pending withdraw requests
