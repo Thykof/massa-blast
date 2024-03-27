@@ -46,7 +46,7 @@ const deployerAccount = await WalletClient.getAccountFromSecretKey(secretKey);
     deployerAccount, // account deploying the smart contract(s)
     [
       {
-        data: readFileSync(path.join(__dirname, 'build', 'massa-blast.wasm')), // smart contract bytecode
+        data: readFileSync(path.join(__dirname, 'build', 'blaster.wasm')), // smart contract bytecode
         coins: fromMAS(0.1), // coins for deployment
         args: new Args().addString(
           'AU18i3vHR3vXYR4Zt6DVycFwSV18zAwr3WdQeaHvbXakPtFLpFm6',
