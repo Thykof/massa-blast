@@ -12,6 +12,8 @@ import {
   stringToBytes,
   u64ToBytes,
   bytesToU64,
+  boolToByte,
+  byteToBool,
 } from '@massalabs/as-types';
 
 import {
@@ -26,6 +28,7 @@ import { SetWithdrawableEvent } from '../events/SetWithdrawableEvent';
 import {
   addWithdrawRequest,
   BLASTING_ADDRESS_KEY,
+  blastingAddress,
   blastingSessionKeyOf,
   consolidatePayment,
   decreaseTotalBlastingAmount,
@@ -35,10 +38,13 @@ import {
   updateWithdrawRequestOpIdOfBlastingSession,
   withdrawableKeyOf,
 } from '../blaster-internal';
+import { isPaused, PAUSED_KEY } from '../blaster-admin';
+import { blastingSessionOf } from '../blaster-read';
 
 // Exports
-export * from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
+export { ownerAddress } from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
 export * from '../blaster-read';
+export * from '../blaster-admin';
 
 /**
  * This function is meant to be called only one time: when the contract is deployed.
@@ -55,48 +61,47 @@ export function constructor(binaryArgs: StaticArray<u8>): StaticArray<u8> {
 
   const args = new Args(binaryArgs);
   const blastingAddress = args
-    .nextSerializable<Address>()
+    .nextString()
     .expect('blastingAddress argument is missing or invalid');
-  Storage.set(BLASTING_ADDRESS_KEY, blastingAddress.serialize());
+
+  Storage.set(BLASTING_ADDRESS_KEY, blastingAddress);
+  Storage.set(PAUSED_KEY, boolToByte(false));
+
   generateEvent(
     'Deployed, owner set to ' +
       Context.caller().toString() +
       ' BlastingAddress set to ' +
-      blastingAddress.toString(),
+      blastingAddress,
   );
-  return [];
-}
-
-export function destroy(_: StaticArray<u8>): StaticArray<u8> {
-  onlyOwner();
-  generateEvent('Destroyed not implemented yet.');
   return [];
 }
 
 export function deposit(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   const initialSCBalance = balance();
+  assert(!byteToBool(isPaused([])), 'Contract is paused.');
   const amount = new Args(binaryArgs)
     .nextU64()
     .expect('amount argument is missing');
+  generateEvent(
+    'Deposit ' + amount.toString() + ' by ' + Context.caller().toString(),
+  );
   assert(
     amount >= MIN_BLASTING_AMOUNT,
     'Amount is less than the minimum required.',
   );
   const startTimestamp = Context.timestamp();
-  const caller = Context.caller();
+  const caller = Context.caller().toString();
 
-  const blastingSession = new BlastingSession(
-    startTimestamp,
-    amount,
-    caller.toString(),
-  );
-  const keyBlastingSession = blastingSessionKeyOf(caller.toString());
+  const blastingSession = new BlastingSession(startTimestamp, amount, caller);
+  const keyBlastingSession = blastingSessionKeyOf(caller);
   assert(!Storage.has(keyBlastingSession), 'Blasting session already exists.');
   Storage.set(keyBlastingSession, new Args().add(blastingSession).serialize());
   increaseTotalBlastingAmount(amount);
 
+  transferCoins(new Address(blastingAddress()), amount);
+
   // assert that the caller sent enough coins for the storage fees and the amount to be set as withdrawable
-  consolidatePayment(initialSCBalance, 0, 0, 0, amount);
+  consolidatePayment(initialSCBalance, 0, 0, 0, 0); // TODO: test this
 
   const depositEvent = new DepositEvent(amount, caller, startTimestamp);
   generateEvent(depositEvent.toJson());
@@ -106,7 +111,7 @@ export function deposit(binaryArgs: StaticArray<u8>): StaticArray<u8> {
 
 export function requestWithdraw(_: StaticArray<u8>): StaticArray<u8> {
   const initialSCBalance = balance();
-  const caller = Context.caller();
+  const caller = Context.caller().toString();
 
   let withdrawRequestOpId = getOriginOperationId();
   if (withdrawRequestOpId === null) {
@@ -136,7 +141,7 @@ export function setWithdrawableFor(
 
   const args = new Args(binaryArgs);
   const userAddress = args
-    .nextSerializable<Address>()
+    .nextString()
     .expect('userAddress argument is missing or invalid');
   const operationId = args
     .nextString()
@@ -146,9 +151,20 @@ export function setWithdrawableFor(
   removeWithdrawRequest(userAddress, operationId);
 
   assert(amount > 0, 'Amount must be greater than 0.');
+
+  // assert that amount is at least the deposit amount
+  const blastingSessions = new Args(
+    blastingSessionOf(new Args().add(userAddress).serialize()),
+  )
+    .nextSerializable<BlastingSession>()
+    .expect('Blasting session is invalid');
+  assert(amount >= blastingSessions.amount, 'Amount is less than the deposit.');
+
+  // assert that the user has not already set a withdrawable amount
   const keyWithdrawable = withdrawableKeyOf(userAddress);
   assert(!Storage.has(keyWithdrawable), 'Withdrawable amount already set.');
   // TODO: insert here multisig check
+  // save the amount as withdrawable
   Storage.set(keyWithdrawable, u64ToBytes(amount));
 
   // assert that the caller sent enough coins for the storage fees and the amount to be set as withdrawable
@@ -162,10 +178,10 @@ export function setWithdrawableFor(
 
 export function withdraw(_: StaticArray<u8>): StaticArray<u8> {
   const initialSCBalance = balance();
-  const caller = Context.caller();
+  const caller = Context.caller().toString();
 
   const keyWithdrawable = withdrawableKeyOf(caller);
-  const keyBlastingSession = blastingSessionKeyOf(caller.toString());
+  const keyBlastingSession = blastingSessionKeyOf(caller);
   assert(
     Storage.has(keyWithdrawable),
     'No withdrawable amount for the caller.',
@@ -181,7 +197,7 @@ export function withdraw(_: StaticArray<u8>): StaticArray<u8> {
     );
     throw new Error('Not enough balance in the contract to withdraw');
   }
-  transferCoins(caller, amountWithdrawable);
+  transferCoins(new Address(caller), amountWithdrawable);
 
   Storage.del(keyWithdrawable);
   Storage.del(keyBlastingSession);

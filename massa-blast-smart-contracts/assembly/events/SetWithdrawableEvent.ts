@@ -1,11 +1,7 @@
 import { Args, Result } from '@massalabs/as-types';
-import { Address } from '@massalabs/massa-as-sdk';
 
 export class SetWithdrawableEvent {
-  constructor(
-    public userAddress: Address = new Address(),
-    public amount: u64 = 0,
-  ) {}
+  constructor(public userAddress: string = '', public amount: u64 = 0) {}
 
   toJson(): string {
     return `{
@@ -22,7 +18,7 @@ export class SetWithdrawableEvent {
   deserialize(data: StaticArray<u8>, offset: i32): Result<i32> {
     const args = new Args(data, offset);
 
-    const resultUserAddress = args.nextSerializable<Address>();
+    const resultUserAddress = args.nextString();
     if (resultUserAddress.isErr()) {
       return new Result(0, "Can't deserialize userAddress.");
     }

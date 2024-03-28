@@ -5,6 +5,8 @@ import {
   Storage,
   transferCoins,
   balance,
+  setBytecode,
+  getKeys,
 } from '@massalabs/massa-as-sdk';
 import {
   Args,
@@ -21,17 +23,17 @@ import { BlastingSession } from './types/BlastingSession';
 // TODO: move this constant in a parameter in the storage, editable by the owner
 export const MIN_BLASTING_AMOUNT: u64 = 10_000_000_000;
 
-export const BLASTING_ADDRESS_KEY = stringToBytes('blastingAddress');
+export const BLASTING_ADDRESS_KEY = 'BLASTING_ADDRESS';
 export const MAX_BLASTING_AMOUNT: u64 = 1_000_000_000_000_000;
 export const totalBlastingAmountKey = stringToBytes('TotalBlastingAmount');
 export const withdrawRequestListKey = stringToBytes('WithdrawRequestList');
 
 // internal functions
 export function updateWithdrawRequestOpIdOfBlastingSession(
-  caller: Address,
+  caller: string,
   withdrawRequestOpId: string,
 ): BlastingSession {
-  const keyBlastingSession = blastingSessionKeyOf(caller.toString());
+  const keyBlastingSession = blastingSessionKeyOf(caller);
   assert(
     Storage.has(keyBlastingSession),
     'No blasting session found for the caller.',
@@ -46,7 +48,7 @@ export function updateWithdrawRequestOpIdOfBlastingSession(
   return blastingSession;
 }
 
-export function addWithdrawRequest(caller: Address, opId: string): void {
+export function addWithdrawRequest(caller: string, opId: string): void {
   const keyWithdrawRequest = withdrawRequestKey(caller);
   assert(
     !Storage.has(keyWithdrawRequest),
@@ -56,17 +58,14 @@ export function addWithdrawRequest(caller: Address, opId: string): void {
   pushWithdrawRequest(caller);
 }
 
-export function pushWithdrawRequest(caller: Address): void {
+export function pushWithdrawRequest(caller: string): void {
   if (!Storage.has(withdrawRequestListKey)) {
-    Storage.set(
-      withdrawRequestListKey,
-      new Args().add([caller.toString()]).serialize(),
-    );
+    Storage.set(withdrawRequestListKey, new Args().add([caller]).serialize());
   } else {
     const withdrawRequestList = new Args(Storage.get(withdrawRequestListKey))
       .nextStringArray()
       .expect('Withdraw request list is invalid');
-    withdrawRequestList.push(caller.toString());
+    withdrawRequestList.push(caller);
     Storage.set(
       withdrawRequestListKey,
       new Args().add(withdrawRequestList).serialize(),
@@ -75,7 +74,7 @@ export function pushWithdrawRequest(caller: Address): void {
 }
 
 export function removeWithdrawRequest(
-  userAddress: Address,
+  userAddress: string,
   operationId: string,
 ): void {
   const keyWithdrawRequest = withdrawRequestKey(userAddress);
@@ -88,14 +87,14 @@ export function removeWithdrawRequest(
   removeWithdrawRequestFromList(userAddress);
 }
 
-export function removeWithdrawRequestFromList(userAddress: Address): void {
+export function removeWithdrawRequestFromList(userAddress: string): void {
   if (!Storage.has(withdrawRequestListKey)) {
     throw new Error('Withdraw request list is missing');
   }
   const withdrawRequestList = new Args(Storage.get(withdrawRequestListKey))
     .nextStringArray()
     .expect('Withdraw request list is invalid');
-  const index = withdrawRequestList.indexOf(userAddress.toString());
+  const index = withdrawRequestList.indexOf(userAddress);
   if (index !== -1) {
     withdrawRequestList.splice(index, 1);
     Storage.set(
@@ -133,12 +132,36 @@ export function blastingSessionKeyOf(userAddress: string): StaticArray<u8> {
   return stringToBytes('BlastingSession_' + userAddress);
 }
 
-export function withdrawableKeyOf(userAddress: Address): StaticArray<u8> {
-  return stringToBytes('Withdrawable_' + userAddress.toString());
+export function withdrawableKeyOf(userAddress: string): StaticArray<u8> {
+  return stringToBytes('Withdrawable_' + userAddress);
 }
 
-export function withdrawRequestKey(userAddress: Address): StaticArray<u8> {
-  return stringToBytes('WithdrawRequest_' + userAddress.toString());
+export function withdrawRequestKey(userAddress: string): StaticArray<u8> {
+  return stringToBytes('WithdrawRequest_' + userAddress);
+}
+
+export function blastingAddress(): string {
+  return Storage.get(BLASTING_ADDRESS_KEY);
+}
+
+export function selfDestruct(transferToAddr: string): void {
+  // 1- empty the SC
+  let emptySc = new StaticArray<u8>(0);
+  setBytecode(emptySc);
+
+  // 2- delete everything in Storage
+  let keys = getKeys();
+  for (let i = 0; i < keys.length; i++) {
+    Storage.del(keys[i]);
+  }
+
+  // 3- transfer back coins if any
+  let scBalance = balance();
+  // Balance will most likely be > 0 as we deleted some keys from the Storage
+  // but if there is nothing in the Storage, no need to call transferCoins
+  if (scBalance > 0) {
+    transferCoins(new Address(transferToAddr), scBalance);
+  }
 }
 
 /**

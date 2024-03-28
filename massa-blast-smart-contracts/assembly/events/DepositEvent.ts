@@ -1,10 +1,9 @@
 import { Args, Result } from '@massalabs/as-types';
-import { Address } from '@massalabs/massa-as-sdk';
 
 export class DepositEvent {
   constructor(
     public amount: u64 = 0,
-    public userAddress: Address = new Address(),
+    public userAddress: string = '',
     public timestamp: u64 = 0,
   ) {}
 
@@ -34,7 +33,7 @@ export class DepositEvent {
     }
     this.amount = resultAmount.unwrap();
 
-    const resultUserAddress = args.nextSerializable<Address>();
+    const resultUserAddress = args.nextString();
     if (resultUserAddress.isErr()) {
       return new Result(0, "Can't deserialize userAddress.");
     }

@@ -1,9 +1,9 @@
-import { Address, Storage } from '@massalabs/massa-as-sdk';
-import { Args, u64ToBytes } from '@massalabs/as-types';
+import { Storage } from '@massalabs/massa-as-sdk';
+import { Args, stringToBytes, u64ToBytes } from '@massalabs/as-types';
 
 import { BlastingSession } from './types/BlastingSession';
 import {
-  BLASTING_ADDRESS_KEY,
+  blastingAddress,
   blastingSessionKeyOf,
   totalBlastingAmountKey,
   withdrawableKeyOf,
@@ -51,7 +51,7 @@ export function getWithdrawRequests(_: StaticArray<u8>): StaticArray<u8> {
 export function withdrawable(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   const args = new Args(binaryArgs);
   const userAddress = args
-    .nextSerializable<Address>()
+    .nextString()
     .expect('userAddress argument is missing or invalid in withdrawable');
   const key = withdrawableKeyOf(userAddress);
   if (!Storage.has(key)) {
@@ -66,9 +66,9 @@ export function blastingSessionOf(
 ): StaticArray<u8> {
   const args = new Args(binaryArgs);
   const userAddress = args
-    .nextSerializable<Address>()
+    .nextString()
     .expect('userAddress argument is missing or invalid');
-  const keyBlastingSession = blastingSessionKeyOf(userAddress.toString());
+  const keyBlastingSession = blastingSessionKeyOf(userAddress);
   if (!Storage.has(keyBlastingSession)) {
     return [];
   }
@@ -76,5 +76,5 @@ export function blastingSessionOf(
 }
 
 export function getBlastingAddress(_: StaticArray<u8>): StaticArray<u8> {
-  return Storage.get(BLASTING_ADDRESS_KEY);
+  return stringToBytes(blastingAddress());
 }
