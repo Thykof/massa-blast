@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ClientService } from '../client/client.service';
 import { BlastingSession } from '../client/types/BlastingSession';
+import { RewardService } from '../reward/reward.service';
 
 interface DistributeResult {
   remainingBalance: bigint;
@@ -14,7 +15,10 @@ export class BlasterService {
   private readonly logger = new Logger('BLASTER');
   private readonly nodeAddress = process.env.NODE_ADDRESS;
 
-  constructor(private clientService: ClientService) {}
+  constructor(
+    private clientService: ClientService,
+    private rewardService: RewardService,
+  ) {}
 
   async blast() {
     this.logger.log('Blasting...');
@@ -38,11 +42,11 @@ export class BlasterService {
     const balance = await this.clientService.getBalance(this.nodeAddress);
     this.logger.log(`Balance: ${balance}`);
 
-    // sort to distribute first the oldest sessions
+    // sort to distribute first the most recent withdraw request sessions
     const sortedSessions = sessions.sort((a, b) => {
-      if (a.startTimestamp > b.startTimestamp) {
+      if (a.endTimestamp < b.endTimestamp) {
         return 1;
-      } else if (a.startTimestamp < b.startTimestamp) {
+      } else if (a.endTimestamp > b.endTimestamp) {
         return -1;
       } else {
         return 0;
@@ -61,11 +65,7 @@ export class BlasterService {
       this.logger.log(
         `setWithdrawableFor ${session.amount} to ${session.userAddress}`,
       );
-      await this.clientService.setWithdrawableFor(
-        session.userAddress,
-        session.withdrawRequestOpId,
-        session.amount,
-      );
+      await this.setWithdrawableFor(session);
       remainingBalance -= session.amount;
       remainingToDistribute -= session.amount;
     }
@@ -77,6 +77,18 @@ export class BlasterService {
       remainingBalance,
       remainingToDistribute,
     };
+  }
+
+  public async setWithdrawableFor(session: BlastingSession) {
+    await this.clientService.setWithdrawableFor(
+      session.userAddress,
+      session.withdrawRequestOpId,
+      await this.rewardService.getRewards(
+        session.amount,
+        new Date(Number(session.startTimestamp)),
+        new Date(Number(session.endTimestamp)),
+      ),
+    );
   }
 
   private async sellOrBuyRolls(

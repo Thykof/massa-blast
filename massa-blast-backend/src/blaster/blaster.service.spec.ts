@@ -1,9 +1,17 @@
 import { BlasterService } from './blaster.service';
 import { ClientService } from '../client/client.service';
 import { BlastingSession } from '../client/types/BlastingSession';
+import { RewardService } from '../reward/reward.service';
+import { Test } from '@nestjs/testing';
+import { DatabaseService } from '../database/database.service';
+import { TotalRollsRecord } from '../database/entities/TotalRollsRecord';
 
 describe('BlasterService', () => {
+  // BlasterService
   let blasterService: BlasterService;
+  let blasterSetWithdrawableFor: jest.SpyInstance;
+
+  // ClientService
   let clientService: ClientService;
   let getBlastingSessionsOfPendingWithdrawRequests: jest.SpyInstance;
   let getBalance: jest.SpyInstance;
@@ -11,6 +19,15 @@ describe('BlasterService', () => {
   let getAllDeferredCredits: jest.SpyInstance;
   let sellRolls: jest.SpyInstance;
   let buyRolls: jest.SpyInstance;
+
+  // RewardService
+  let rewardService: RewardService;
+
+  // Dates
+  const startDate = new Date('2024-01-01');
+  const endDate = new Date('2024-01-02');
+  const startTimestamp = BigInt(startDate.getTime());
+  const endTimestamp = BigInt(endDate.getTime());
 
   beforeEach(async () => {
     clientService = new ClientService();
@@ -27,7 +44,32 @@ describe('BlasterService', () => {
     sellRolls = jest.spyOn(clientService, 'sellRolls').mockResolvedValue();
     buyRolls = jest.spyOn(clientService, 'buyRolls').mockResolvedValue();
 
-    blasterService = new BlasterService(clientService);
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        BlasterService,
+        ClientService,
+        RewardService,
+        DatabaseService,
+      ],
+    })
+      .overrideProvider(DatabaseService)
+      .useValue({
+        addTotalRolls: jest.fn(),
+        getTotalRolls: jest
+          .fn()
+          .mockResolvedValue([
+            new TotalRollsRecord(1_000_000_000, startDate),
+            new TotalRollsRecord(1_000_000_000, endDate),
+          ]),
+      })
+      .compile();
+
+    rewardService = await moduleRef.resolve(RewardService);
+    blasterService = new BlasterService(clientService, rewardService);
+    blasterSetWithdrawableFor = jest.spyOn(
+      blasterService,
+      'setWithdrawableFor',
+    );
   });
 
   it('should be defined', () => {
@@ -48,7 +90,7 @@ describe('BlasterService', () => {
     await blasterService.blast();
     expect(getBalance).toHaveBeenCalled();
     expect(getAllDeferredCredits).toHaveBeenCalled();
-    expect(setWithdrawableFor).not.toHaveBeenCalled();
+    expect(blasterSetWithdrawableFor).not.toHaveBeenCalled();
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).not.toHaveBeenCalled();
     expect(buyRolls).not.toHaveBeenCalled();
@@ -58,7 +100,13 @@ describe('BlasterService', () => {
     getBlastingSessionsOfPendingWithdrawRequests = jest
       .spyOn(clientService, 'getBlastingSessionsOfPendingWithdrawRequests')
       .mockResolvedValue([
-        new BlastingSession(0n, 1_000_000_000n, 'AU1', 'O1'),
+        new BlastingSession(
+          startTimestamp,
+          1_000_000_000n,
+          'AU1',
+          'O1',
+          endTimestamp,
+        ),
       ]);
     getBalance = jest.spyOn(clientService, 'getBalance').mockResolvedValue(0n);
     setWithdrawableFor = jest
@@ -71,7 +119,7 @@ describe('BlasterService', () => {
     await blasterService.blast();
     expect(getBalance).toHaveBeenCalled();
     expect(getAllDeferredCredits).toHaveBeenCalled();
-    expect(setWithdrawableFor).not.toHaveBeenCalled();
+    expect(blasterSetWithdrawableFor).not.toHaveBeenCalled();
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).toHaveBeenCalled();
     expect(buyRolls).not.toHaveBeenCalled();
@@ -94,7 +142,7 @@ describe('BlasterService', () => {
     await blasterService.blast();
     expect(getBalance).toHaveBeenCalled();
     expect(getAllDeferredCredits).toHaveBeenCalled();
-    expect(setWithdrawableFor).not.toHaveBeenCalled();
+    expect(blasterSetWithdrawableFor).not.toHaveBeenCalled();
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).not.toHaveBeenCalled();
     expect(buyRolls).toHaveBeenCalled();
@@ -104,7 +152,13 @@ describe('BlasterService', () => {
     getBlastingSessionsOfPendingWithdrawRequests = jest
       .spyOn(clientService, 'getBlastingSessionsOfPendingWithdrawRequests')
       .mockResolvedValue([
-        new BlastingSession(0n, 100_000_000_000n, 'AU1', 'O1'),
+        new BlastingSession(
+          startTimestamp,
+          100_000_000_000n,
+          'AU1',
+          'O1',
+          endTimestamp,
+        ),
       ]);
     getBalance = jest
       .spyOn(clientService, 'getBalance')
@@ -119,10 +173,15 @@ describe('BlasterService', () => {
     await blasterService.blast();
     expect(getBalance).toHaveBeenCalled();
     expect(getAllDeferredCredits).toHaveBeenCalled();
-    expect(setWithdrawableFor).toHaveBeenCalledWith(
-      'AU1',
-      'O1',
-      100_000_000_000n,
+    expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
+      1,
+      new BlastingSession(
+        startTimestamp,
+        100_000_000_000n,
+        'AU1',
+        'O1',
+        endTimestamp,
+      ),
     );
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).toHaveBeenCalledTimes(0);
@@ -133,7 +192,13 @@ describe('BlasterService', () => {
     getBlastingSessionsOfPendingWithdrawRequests = jest
       .spyOn(clientService, 'getBlastingSessionsOfPendingWithdrawRequests')
       .mockResolvedValue([
-        new BlastingSession(0n, 100_000_000_000n, 'AU1', 'O1'),
+        new BlastingSession(
+          startTimestamp,
+          100_000_000_000n,
+          'AU1',
+          'O1',
+          endTimestamp,
+        ),
       ]);
     getBalance = jest
       .spyOn(clientService, 'getBalance')
@@ -148,10 +213,15 @@ describe('BlasterService', () => {
     await blasterService.blast();
     expect(getBalance).toHaveBeenCalled();
     expect(getAllDeferredCredits).toHaveBeenCalled();
-    expect(setWithdrawableFor).toHaveBeenCalledWith(
-      'AU1',
-      'O1',
-      100_000_000_000n,
+    expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
+      1,
+      new BlastingSession(
+        startTimestamp,
+        100_000_000_000n,
+        'AU1',
+        'O1',
+        endTimestamp,
+      ),
     );
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).toHaveBeenCalledTimes(0);
@@ -162,8 +232,20 @@ describe('BlasterService', () => {
     getBlastingSessionsOfPendingWithdrawRequests = jest
       .spyOn(clientService, 'getBlastingSessionsOfPendingWithdrawRequests')
       .mockResolvedValue([
-        new BlastingSession(0n, 100_000_000_000n, 'AU1', 'O1'),
-        new BlastingSession(0n, 200_000_000_000n, 'AU2', 'O2'),
+        new BlastingSession(
+          startTimestamp,
+          100_000_000_000n,
+          'AU1',
+          'O1',
+          endTimestamp,
+        ),
+        new BlastingSession(
+          startTimestamp,
+          200_000_000_000n,
+          'AU2',
+          'O2',
+          endTimestamp,
+        ),
       ]);
     getBalance = jest
       .spyOn(clientService, 'getBalance')
@@ -178,11 +260,15 @@ describe('BlasterService', () => {
     await blasterService.blast();
     expect(getBalance).toHaveBeenCalled();
     expect(getAllDeferredCredits).toHaveBeenCalled();
-    expect(setWithdrawableFor).toHaveBeenNthCalledWith(
+    expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
       1,
-      'AU1',
-      'O1',
-      100_000_000_000n,
+      new BlastingSession(
+        startTimestamp,
+        100_000_000_000n,
+        'AU1',
+        'O1',
+        endTimestamp,
+      ),
     );
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).toHaveBeenCalledTimes(1);
@@ -193,8 +279,20 @@ describe('BlasterService', () => {
     getBlastingSessionsOfPendingWithdrawRequests = jest
       .spyOn(clientService, 'getBlastingSessionsOfPendingWithdrawRequests')
       .mockResolvedValue([
-        new BlastingSession(0n, 100_000_000_000n, 'AU1', 'O1'),
-        new BlastingSession(0n, 200_000_000_000n, 'AU2', 'O2'),
+        new BlastingSession(
+          startTimestamp,
+          100_000_000_000n,
+          'AU1',
+          'O1',
+          endTimestamp,
+        ),
+        new BlastingSession(
+          startTimestamp,
+          200_000_000_000n,
+          'AU2',
+          'O2',
+          endTimestamp,
+        ),
       ]);
     getBalance = jest
       .spyOn(clientService, 'getBalance')
@@ -209,17 +307,25 @@ describe('BlasterService', () => {
     await blasterService.blast();
     expect(getBalance).toHaveBeenCalled();
     expect(getAllDeferredCredits).toHaveBeenCalled();
-    expect(setWithdrawableFor).toHaveBeenNthCalledWith(
+    expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
       1,
-      'AU1',
-      'O1',
-      100_000_000_000n,
+      new BlastingSession(
+        startTimestamp,
+        100_000_000_000n,
+        'AU1',
+        'O1',
+        endTimestamp,
+      ),
     );
-    expect(setWithdrawableFor).toHaveBeenNthCalledWith(
+    expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
       2,
-      'AU2',
-      'O2',
-      200_000_000_000n,
+      new BlastingSession(
+        startTimestamp,
+        200_000_000_000n,
+        'AU2',
+        'O2',
+        endTimestamp,
+      ),
     );
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).toHaveBeenCalledTimes(0);
@@ -230,8 +336,20 @@ describe('BlasterService', () => {
     getBlastingSessionsOfPendingWithdrawRequests = jest
       .spyOn(clientService, 'getBlastingSessionsOfPendingWithdrawRequests')
       .mockResolvedValue([
-        new BlastingSession(0n, 100_000_000_000n, 'AU1', 'O1'),
-        new BlastingSession(1n, 200_000_000_000n, 'AU2', 'O2'),
+        new BlastingSession(
+          startTimestamp,
+          100_000_000_000n,
+          'AU1',
+          'O1',
+          endTimestamp,
+        ),
+        new BlastingSession(
+          startTimestamp,
+          200_000_000_000n,
+          'AU2',
+          'O2',
+          endTimestamp + 1n,
+        ),
       ]);
     getBalance = jest
       .spyOn(clientService, 'getBalance')
@@ -246,18 +364,27 @@ describe('BlasterService', () => {
     await blasterService.blast();
     expect(getBalance).toHaveBeenCalled();
     expect(getAllDeferredCredits).toHaveBeenCalled();
-    expect(setWithdrawableFor).toHaveBeenNthCalledWith(
+    expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
       1,
-      'AU1',
-      'O1',
-      100_000_000_000n,
+      new BlastingSession(
+        startTimestamp,
+        200_000_000_000n,
+        'AU2',
+        'O2',
+        endTimestamp + 1n,
+      ),
     );
-    expect(setWithdrawableFor).toHaveBeenNthCalledWith(
+    expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
       2,
-      'AU2',
-      'O2',
-      200_000_000_000n,
+      new BlastingSession(
+        startTimestamp,
+        100_000_000_000n,
+        'AU1',
+        'O1',
+        endTimestamp,
+      ),
     );
+
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).toHaveBeenCalledTimes(0);
     expect(buyRolls).toHaveBeenCalledTimes(0);
@@ -267,8 +394,20 @@ describe('BlasterService', () => {
     getBlastingSessionsOfPendingWithdrawRequests = jest
       .spyOn(clientService, 'getBlastingSessionsOfPendingWithdrawRequests')
       .mockResolvedValue([
-        new BlastingSession(0n, 100_000_000_000n, 'AU1', 'O1'),
-        new BlastingSession(0n, 200_000_000_000n, 'AU2', 'O2'),
+        new BlastingSession(
+          startTimestamp,
+          100_000_000_000n,
+          'AU1',
+          'O1',
+          endTimestamp,
+        ),
+        new BlastingSession(
+          startTimestamp,
+          200_000_000_000n,
+          'AU2',
+          'O2',
+          endTimestamp,
+        ),
       ]);
     getBalance = jest
       .spyOn(clientService, 'getBalance')
@@ -283,17 +422,25 @@ describe('BlasterService', () => {
     await blasterService.blast();
     expect(getBalance).toHaveBeenCalled();
     expect(getAllDeferredCredits).toHaveBeenCalled();
-    expect(setWithdrawableFor).toHaveBeenNthCalledWith(
+    expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
       1,
-      'AU1',
-      'O1',
-      100_000_000_000n,
+      new BlastingSession(
+        startTimestamp,
+        100_000_000_000n,
+        'AU1',
+        'O1',
+        endTimestamp,
+      ),
     );
-    expect(setWithdrawableFor).toHaveBeenNthCalledWith(
+    expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
       2,
-      'AU2',
-      'O2',
-      200_000_000_000n,
+      new BlastingSession(
+        startTimestamp,
+        200_000_000_000n,
+        'AU2',
+        'O2',
+        endTimestamp,
+      ),
     );
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).toHaveBeenCalledTimes(0);
@@ -304,8 +451,20 @@ describe('BlasterService', () => {
     getBlastingSessionsOfPendingWithdrawRequests = jest
       .spyOn(clientService, 'getBlastingSessionsOfPendingWithdrawRequests')
       .mockResolvedValue([
-        new BlastingSession(0n, 100_000_000_000n, 'AU1', 'O1'),
-        new BlastingSession(0n, 300_000_000_000n, 'AU2', 'O2'),
+        new BlastingSession(
+          startTimestamp,
+          100_000_000_000n,
+          'AU1',
+          'O1',
+          endTimestamp,
+        ),
+        new BlastingSession(
+          startTimestamp,
+          300_000_000_000n,
+          'AU2',
+          'O2',
+          endTimestamp,
+        ),
       ]);
     getBalance = jest
       .spyOn(clientService, 'getBalance')
@@ -320,11 +479,15 @@ describe('BlasterService', () => {
     await blasterService.blast();
     expect(getBalance).toHaveBeenCalled();
     expect(getAllDeferredCredits).toHaveBeenCalled();
-    expect(setWithdrawableFor).toHaveBeenNthCalledWith(
+    expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
       1,
-      'AU1',
-      'O1',
-      100_000_000_000n,
+      new BlastingSession(
+        startTimestamp,
+        100_000_000_000n,
+        'AU1',
+        'O1',
+        endTimestamp,
+      ),
     );
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).toHaveBeenNthCalledWith(1, 1n);
@@ -335,8 +498,20 @@ describe('BlasterService', () => {
     getBlastingSessionsOfPendingWithdrawRequests = jest
       .spyOn(clientService, 'getBlastingSessionsOfPendingWithdrawRequests')
       .mockResolvedValue([
-        new BlastingSession(0n, 100_000_000_000n, 'AU1', 'O1'),
-        new BlastingSession(0n, 300_000_000_000n, 'AU2', 'O2'),
+        new BlastingSession(
+          startTimestamp,
+          100_000_000_000n,
+          'AU1',
+          'O1',
+          endTimestamp,
+        ),
+        new BlastingSession(
+          startTimestamp,
+          300_000_000_000n,
+          'AU2',
+          'O2',
+          endTimestamp,
+        ),
       ]);
     getBalance = jest
       .spyOn(clientService, 'getBalance')
@@ -351,17 +526,25 @@ describe('BlasterService', () => {
     await blasterService.blast();
     expect(getBalance).toHaveBeenCalled();
     expect(getAllDeferredCredits).toHaveBeenCalled();
-    expect(setWithdrawableFor).toHaveBeenNthCalledWith(
+    expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
       1,
-      'AU1',
-      'O1',
-      100_000_000_000n,
+      new BlastingSession(
+        startTimestamp,
+        100_000_000_000n,
+        'AU1',
+        'O1',
+        endTimestamp,
+      ),
     );
-    expect(setWithdrawableFor).toHaveBeenNthCalledWith(
+    expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
       2,
-      'AU2',
-      'O2',
-      300_000_000_000n,
+      new BlastingSession(
+        startTimestamp,
+        300_000_000_000n,
+        'AU2',
+        'O2',
+        endTimestamp,
+      ),
     );
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).not.toHaveBeenCalled();

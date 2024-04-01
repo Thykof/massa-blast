@@ -10,6 +10,7 @@ export class BlastingSession implements ISerializable<BlastingSession> {
     public amount: bigint = 0n,
     public userAddress: string = '',
     public withdrawRequestOpId: string = '',
+    public endTimestamp: bigint = 0n,
   ) {}
 
   serialize(): Uint8Array {
@@ -25,6 +26,7 @@ export class BlastingSession implements ISerializable<BlastingSession> {
     this.amount = args.nextU64();
     this.userAddress = args.nextString();
     this.withdrawRequestOpId = args.nextString();
+    this.endTimestamp = args.nextU64();
     return { instance: this, offset: args.getOffset() };
   }
 }
