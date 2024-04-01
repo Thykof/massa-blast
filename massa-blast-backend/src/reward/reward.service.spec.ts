@@ -1,15 +1,23 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { RewardService } from './reward.service';
-import { AppModule } from '../app.module';
-import { HttpModule } from '@nestjs/axios';
+import { DatabaseService } from '../database/database.service';
+import { TotalRollsRecord } from '../database/entities/TotalRollsRecord';
 
 describe('RewardService', () => {
   let service: RewardService;
 
   beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      imports: [AppModule, HttpModule],
-    }).compile();
+    const module = await Test.createTestingModule({
+      providers: [RewardService, DatabaseService],
+    })
+      .overrideProvider(DatabaseService)
+      .useValue({
+        addTotalRolls: jest.fn(),
+        getTotalRolls: jest
+          .fn()
+          .mockResolvedValue([new TotalRollsRecord(100_000_000_000)]),
+      })
+      .compile();
 
     service = module.get<RewardService>(RewardService);
   });
@@ -19,33 +27,33 @@ describe('RewardService', () => {
   });
 
   describe('getRewards', () => {
-    it('should return a number', async () => {
-      const result = await service.getRewards(1, new Date(), new Date());
-      expect(typeof result).toBe('number');
+    it('should return a bigint', async () => {
+      const result = await service.getRewards(1n, new Date(), new Date());
+      expect(typeof result).toBe('bigint');
     });
   });
 
   describe('rewardsDuringPeriod', () => {
-    it('should return a number', () => {
+    it('should return a bigint', () => {
       const result = service.rewardsDuringPeriod(
-        1,
-        2,
+        1n,
+        2n,
         new Date(),
         new Date(),
-        1,
+        100n,
       );
-      expect(typeof result).toBe('number');
+      expect(typeof result).toBe('bigint');
     });
 
-    it('should return a number', () => {
+    it('should return a bigint', () => {
       const result = service.rewardsDuringPeriod(
-        1,
-        1,
+        1n,
+        1n,
         new Date('2021-01-01'),
         new Date('2021-01-02'),
-        1,
+        100n,
       );
-      expect(result).toBe(176256);
+      expect(result).toBe(176_256_000_000_000n);
     });
   });
 });

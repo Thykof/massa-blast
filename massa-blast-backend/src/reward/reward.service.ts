@@ -6,60 +6,56 @@ export class RewardService {
   constructor(private databaseService: DatabaseService) {}
 
   async getRewards(
-    userRolls: number,
+    userAmount: bigint,
     fromDate: Date,
     toDate: Date,
-  ): Promise<number> {
+  ): Promise<bigint> {
     const totalRollsRecords = await this.databaseService.getTotalRolls(
       fromDate,
       toDate,
     );
 
-    let totalRewards = 0;
+    let totalRewards = 0n;
 
-    for (let i = 0; i < totalRollsRecords.length - 2; i++) {
-      const totalRollsStart = totalRollsRecords[i].value;
-      const totalRollsEnd = totalRollsRecords[i + 1].value;
-
-      const rewards = this.rewardsDuringPeriod(
-        totalRollsStart,
-        totalRollsEnd,
+    for (let i = 0; i <= totalRollsRecords.length - 2; i++) {
+      totalRewards += this.rewardsDuringPeriod(
+        BigInt(totalRollsRecords[i].value),
+        BigInt(totalRollsRecords[i + 1].value),
         totalRollsRecords[i].createdAt,
         totalRollsRecords[i + 1].createdAt,
-        userRolls,
+        userAmount,
       );
-
-      totalRewards += rewards;
     }
 
     return totalRewards;
   }
 
   rewardsDuringPeriod(
-    totalRollsStart: number,
-    totalRollsEnd: number,
+    totalRollsStart: bigint,
+    totalRollsEnd: bigint,
     periodStart: Date,
     periodEnd: Date,
-    userRolls: number,
-  ): number {
-    const averageRolls = (totalRollsStart + totalRollsEnd) / 2;
+    userAmount: bigint,
+  ): bigint {
+    const averageRolls = (totalRollsStart + totalRollsEnd) / 2n;
 
-    const rewardsPerDay = this.rewardsPerRoll(averageRolls, userRolls);
-    const rewardsPerHour = rewardsPerDay / 24;
-    const rewardsPerMinute = rewardsPerHour / 60;
-    const rewardsPerSecond = rewardsPerMinute / 60;
+    const rewardsPerDay = this.rewardsPerRoll(averageRolls, userAmount);
+    const rewardsPerHour = rewardsPerDay / 24n;
+    const rewardsPerMinute = rewardsPerHour / 60n;
+    const rewardsPerSecond = rewardsPerMinute / 60n;
 
-    const difference = periodEnd.getTime() - periodStart.getTime(); // in milliseconds
+    const difference =
+      BigInt(periodEnd.getTime()) - BigInt(periodStart.getTime()); // in milliseconds
 
-    return (rewardsPerSecond * difference) / 1000;
+    return (rewardsPerSecond * difference) / 1000n;
   }
 
-  private rewardsPerRoll(totalRolls: number, userRolls: number): number {
-    const totalMAS = 172800;
-    const productionRate = userRolls / totalRolls;
+  private rewardsPerRoll(totalRolls: bigint, userAmount: bigint): bigint {
+    const totalMAS = 172_800_000_000_000n;
+    const productionRate = userAmount / 100n / totalRolls;
 
-    const rewardsPerBlock = totalMAS * productionRate * 0.7;
-    const rewardsPerEndorsement = totalMAS * 16 * productionRate * 0.02;
+    const rewardsPerBlock = (totalMAS * productionRate * 7n) / 10n;
+    const rewardsPerEndorsement = (totalMAS * 16n * productionRate * 2n) / 100n;
 
     return rewardsPerBlock + rewardsPerEndorsement;
   }

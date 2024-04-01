@@ -7,5 +7,6 @@ import { DatabaseModule } from '../database/database.module';
   imports: [DatabaseModule],
   providers: [RewardService],
   controllers: [RewardController],
+  exports: [RewardService],
 })
 export class RewardModule {}
