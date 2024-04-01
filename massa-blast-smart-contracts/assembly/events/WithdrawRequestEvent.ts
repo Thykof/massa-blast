@@ -1,11 +1,11 @@
-import { Args, Result } from '@massalabs/as-types';
+import { Args, Result, Serializable } from '@massalabs/as-types';
 
-export class WithdrawEvent {
+export class WithdrawRequestEvent implements Serializable {
   constructor(public userAddress: string = '') {}
 
   toJson(): string {
     return `{
-    "type":"WithdrawEvent",
+    "type":"WithdrawRequestEvent",
     "userAddress":"${this.userAddress.toString()}"
     }`;
   }
@@ -21,7 +21,6 @@ export class WithdrawEvent {
     if (resultUserAddress.isErr()) {
       return new Result(0, "Can't deserialize userAddress.");
     }
-
     this.userAddress = resultUserAddress.unwrap();
 
     return new Result(args.offset);

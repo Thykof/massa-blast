@@ -1,6 +1,6 @@
-import { Args, Result } from '@massalabs/as-types';
+import { Args, Result, Serializable } from '@massalabs/as-types';
 
-export class DepositEvent {
+export class DepositEvent implements Serializable {
   constructor(
     public amount: u64 = 0,
     public userAddress: string = '',
@@ -37,15 +37,12 @@ export class DepositEvent {
     if (resultUserAddress.isErr()) {
       return new Result(0, "Can't deserialize userAddress.");
     }
-
     this.userAddress = resultUserAddress.unwrap();
 
     const resultTimestamp = args.nextU64();
-
     if (resultTimestamp.isErr()) {
       return new Result(0, "Can't deserialize timestamp.");
     }
-
     this.timestamp = resultTimestamp.unwrap();
 
     return new Result(args.offset);

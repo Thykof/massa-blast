@@ -1,6 +1,6 @@
-import { Args, Result } from '@massalabs/as-types';
+import { Args, Result, Serializable } from '@massalabs/as-types';
 
-export class SetWithdrawableEvent {
+export class SetWithdrawableEvent implements Serializable {
   constructor(public userAddress: string = '', public amount: u64 = 0) {}
 
   toJson(): string {
@@ -28,7 +28,6 @@ export class SetWithdrawableEvent {
     if (resultAmount.isErr()) {
       return new Result(0, "Can't deserialize amount.");
     }
-
     this.amount = resultAmount.unwrap();
 
     return new Result(args.offset);

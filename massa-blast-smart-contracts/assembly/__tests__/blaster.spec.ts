@@ -31,10 +31,11 @@ import {
 } from '@massalabs/massa-as-sdk';
 import { BlastingSession } from '../types/BlastingSession';
 import { DepositEvent } from '../events/DepositEvent';
-import { WithdrawEvent } from '../events/WithdrawEvent';
+import { WithdrawRequestEvent } from '../events/WithdrawRequestEvent';
 import { SetWithdrawableEvent } from '../events/SetWithdrawableEvent';
 import { generateDumbAddress } from './test-utils';
 import { withdrawRequestKey } from '../blaster-internal';
+import { costOfKeyWithdrawable } from '../storage-cost';
 
 const contractAddress = 'AS12BqZEQ6sByhRLyEuf0YbQmcF2PsDdkNNG1akBJu9XcjZA1eT';
 const adminAddress = 'AU1mhPhXCfh8afoNnbW91bXUVAmu8wU7u8v54yNTMvY7E52KBbz3';
@@ -62,11 +63,16 @@ function callWithCoins(
   return result;
 }
 
-function callWithCoinsAdmin(
+function callSetWithdrawableAdmin(
   call: () => StaticArray<u8>,
   amount: u64,
 ): StaticArray<u8> {
   switchUser(adminAddress);
+  amount += 28_500_000;
+  mockBalance(
+    contractAddress.toString(),
+    balanceOf(contractAddress.toString()) + amount,
+  );
   const result = callWithCoins(call, amount);
   switchUser(userAddress);
   return result;
@@ -186,7 +192,7 @@ describe('requestWithdraw', () => {
     expect(Storage.has(withdrawRequestKey(userAddress))).toStrictEqual(true);
     expect(totalBlastingAmount([])).toStrictEqual(u64ToBytes(0));
     // admin send coins to withdraw
-    callWithCoinsAdmin(() => {
+    callSetWithdrawableAdmin(() => {
       return setWithdrawableFor(
         new Args()
           .add(userAddress)
@@ -211,7 +217,7 @@ describe('requestWithdraw', () => {
     mockOriginOperationId(opId);
     const result = requestWithdraw([]);
     const resultEvent = new Args(result)
-      .nextSerializable<WithdrawEvent>()
+      .nextSerializable<WithdrawRequestEvent>()
       .unwrap();
     // assert
     expect(totalBlastingAmount([])).toStrictEqual(u64ToBytes(0));
@@ -300,7 +306,7 @@ describe('setWithdrawableFor', () => {
     mockOriginOperationId(opId);
     requestWithdraw([]);
     // admin send coins to withdraw
-    callWithCoinsAdmin(() => {
+    callSetWithdrawableAdmin(() => {
       return setWithdrawableFor(
         new Args()
           .add(userAddress)
@@ -321,7 +327,7 @@ describe('setWithdrawableFor', () => {
     mockOriginOperationId(opId);
     requestWithdraw([]);
     // admin send coins to withdraw
-    callWithCoinsAdmin(() => {
+    callSetWithdrawableAdmin(() => {
       return setWithdrawableFor(
         new Args()
           .add(userAddress)
@@ -330,7 +336,7 @@ describe('setWithdrawableFor', () => {
           .serialize(),
       );
     }, amountDeposit);
-    callWithCoinsAdmin(() => {
+    callSetWithdrawableAdmin(() => {
       return setWithdrawableFor(
         new Args()
           .add(userAddress)
@@ -353,7 +359,7 @@ describe('setWithdrawableFor', () => {
     requestWithdraw([]);
     // Admin calls setWithdrawableFor with less amount
     const amount = u64(5_000_000_300) as u64;
-    callWithCoinsAdmin(() => {
+    callSetWithdrawableAdmin(() => {
       return setWithdrawableFor(
         new Args().add(userAddress).add(opId).add(u64(amount)).serialize(),
       );
@@ -375,7 +381,7 @@ describe('setWithdrawableFor', () => {
       .unwrap();
     expect(withdrawRequests.length).toStrictEqual(1);
     // admin send coins to withdraw
-    callWithCoinsAdmin(() => {
+    callSetWithdrawableAdmin(() => {
       return setWithdrawableFor(
         new Args()
           .add(userAddress)
@@ -398,7 +404,7 @@ describe('setWithdrawableFor', () => {
     );
     // admin can't send coins to withdraw
     expect(() => {
-      callWithCoinsAdmin(() => {
+      callSetWithdrawableAdmin(() => {
         return setWithdrawableFor(
           new Args()
             .add(userAddress)
@@ -413,7 +419,7 @@ describe('setWithdrawableFor', () => {
     withdraw([]);
     // admin still can't send coins to withdraw
     expect(() => {
-      callWithCoinsAdmin(() => {
+      callSetWithdrawableAdmin(() => {
         return setWithdrawableFor(
           new Args()
             .add(userAddress)
@@ -460,7 +466,7 @@ describe('setWithdrawableFor', () => {
       .expect('should be a list of blasting sessions');
     expect(blastingSessions.length).toStrictEqual(2);
     // admin send coins to withdraw for user 2
-    callWithCoinsAdmin(() => {
+    callSetWithdrawableAdmin(() => {
       return setWithdrawableFor(
         new Args()
           .add(userAddress2)
@@ -475,7 +481,7 @@ describe('setWithdrawableFor', () => {
       .unwrap();
     expect(withdrawRequests.length).toStrictEqual(1);
     // admin send coins to withdraw for user 1
-    callWithCoinsAdmin(() => {
+    callSetWithdrawableAdmin(() => {
       return setWithdrawableFor(
         new Args()
           .add(userAddress)
@@ -503,7 +509,7 @@ describe('setWithdrawableFor', () => {
     switchUser(userAddress);
     requestWithdraw([]);
     // Admin calls setWithdrawableFor with less amount
-    const result = callWithCoinsAdmin(() => {
+    const result = callSetWithdrawableAdmin(() => {
       return setWithdrawableFor(
         new Args()
           .add(userAddress)
@@ -520,7 +526,6 @@ describe('setWithdrawableFor', () => {
     expect(resultEvent.amount).toStrictEqual(amountDeposit);
 
     // check consequences
-    switchUser(userAddress);
     const data = withdrawable(new Args().add(userAddress).serialize());
     const resultAmount = new Args(data).nextU64().unwrap();
     expect(resultAmount).toStrictEqual(amountDeposit);
@@ -549,7 +554,7 @@ describe('withdraw', () => {
     mockOriginOperationId(opId);
     requestWithdraw([]);
     // Admin calls setWithdrawableFor
-    callWithCoinsAdmin(() => {
+    callSetWithdrawableAdmin(() => {
       return setWithdrawableFor(
         new Args()
           .add(userAddress)
@@ -569,34 +574,39 @@ describe('withdraw', () => {
     // prepare
     // User deposit
     const amountDeposit = 10_000_000_000 as u64;
+    mockBalance(contractAddress.toString(), 0);
     callWithCoins(() => {
       return deposit(new Args().add(amountDeposit).serialize());
     }, amountDeposit);
+    expect(balanceOf(blastingAddress.toString())).toStrictEqual(amountDeposit);
+    expect(balanceOf(contractAddress.toString())).toStrictEqual(0);
     // User requests a withdraw
     mockOriginOperationId(opId);
     requestWithdraw([]);
     // Admin calls setWithdrawableFor
     const amount = u64(11_000_200_000) as u64;
-    callWithCoinsAdmin(() => {
+    callSetWithdrawableAdmin(() => {
       return setWithdrawableFor(
         new Args().add(userAddress).add(opId).add(u64(amount)).serialize(),
       );
     }, amount);
     // check that the amount is set
-    // mock contract balance because mockTransferredCoins don't credit the contract:
-    mockBalance(contractAddress.toString(), amount);
-    expect(balanceOf(contractAddress.toString())).toStrictEqual(amount);
     let data = withdrawable(new Args().add(userAddress).serialize());
     const resultAmount = new Args(data).nextU64().unwrap();
     expect(resultAmount).toStrictEqual(amount);
 
     // test
     switchUser(userAddress);
-    data = withdraw([]);
+    const balanceBefore = balanceOf(userAddress.toString());
+    const costWithdrawable = costOfKeyWithdrawable(userAddress);
+    mockTransferredCoins(costWithdrawable);
+    withdraw([]);
+    mockTransferredCoins(0);
+    const balanceAfter = balanceOf(userAddress.toString());
 
     // assert
     expect(data).toStrictEqual(u64ToBytes(amount));
-    expect(balanceOf(userAddress.toString())).toStrictEqual(amount);
+    expect(balanceAfter - balanceBefore).toStrictEqual(amount);
   });
 });
 

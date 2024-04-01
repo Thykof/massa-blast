@@ -14,16 +14,18 @@ import {
   bytesToU64,
   boolToByte,
   byteToBool,
+  bytesToString,
 } from '@massalabs/as-types';
 
 import {
   onlyOwner,
+  ownerAddress,
   setOwner,
 } from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
 
 import { BlastingSession } from '../types/BlastingSession';
 import { DepositEvent } from '../events/DepositEvent';
-import { WithdrawEvent } from '../events/WithdrawEvent';
+import { WithdrawRequestEvent } from '../events/WithdrawRequestEvent';
 import { SetWithdrawableEvent } from '../events/SetWithdrawableEvent';
 import {
   addWithdrawRequest,
@@ -37,9 +39,15 @@ import {
   removeWithdrawRequest,
   updateWithdrawRequestOpIdOfBlastingSession,
   withdrawableKeyOf,
+  withdrawRequestListKey,
 } from '../blaster-internal';
 import { isPaused, PAUSED_KEY } from '../blaster-admin';
 import { blastingSessionOf } from '../blaster-read';
+import {
+  costOfKeyWithdrawable,
+  costOfRequestWithdraw,
+} from '../storage-cost';
+import { WithdrawnEvent } from '../events/WithdrawnEvent';
 
 // Exports
 export { ownerAddress } from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
@@ -58,6 +66,11 @@ export function constructor(binaryArgs: StaticArray<u8>): StaticArray<u8> {
     return stringToBytes('Already deployed');
   }
   setOwner(new Args().add(Context.caller()).serialize());
+  increaseTotalBlastingAmount(0);
+  Storage.set(
+    withdrawRequestListKey,
+    new Args().add([] as string[]).serialize(),
+  );
 
   const args = new Args(binaryArgs);
   const blastingAddress = args
@@ -67,12 +80,7 @@ export function constructor(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   Storage.set(BLASTING_ADDRESS_KEY, blastingAddress);
   Storage.set(PAUSED_KEY, boolToByte(false));
 
-  generateEvent(
-    'Deployed, owner set to ' +
-      Context.caller().toString() +
-      ' BlastingAddress set to ' +
-      blastingAddress,
-  );
+  generateEvent('BlastingAddress set to ' + blastingAddress);
   return [];
 }
 
@@ -82,9 +90,6 @@ export function deposit(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   const amount = new Args(binaryArgs)
     .nextU64()
     .expect('amount argument is missing');
-  generateEvent(
-    'Deposit ' + amount.toString() + ' by ' + Context.caller().toString(),
-  );
   assert(
     amount >= MIN_BLASTING_AMOUNT,
     'Amount is less than the minimum required.',
@@ -101,7 +106,7 @@ export function deposit(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   transferCoins(new Address(blastingAddress()), amount);
 
   // assert that the caller sent enough coins for the storage fees and the amount to be set as withdrawable
-  consolidatePayment(initialSCBalance, 0, 0, 0, 0); // TODO: test this
+  consolidatePayment(initialSCBalance, 0, 0, 0, 0);
 
   const depositEvent = new DepositEvent(amount, caller, startTimestamp);
   generateEvent(depositEvent.toJson());
@@ -122,12 +127,18 @@ export function requestWithdraw(_: StaticArray<u8>): StaticArray<u8> {
     caller,
     withdrawRequestOpId,
   );
+  generateEvent(
+    `[requestWithdraw] cost of the operation: ${costOfRequestWithdraw(
+      caller,
+      withdrawRequestOpId,
+    )}`,
+  );
   addWithdrawRequest(caller, withdrawRequestOpId);
   decreaseTotalBlastingAmount(blastingSession.amount);
 
   consolidatePayment(initialSCBalance, 0, 0, 0, 0);
 
-  const withdrawEvent = new WithdrawEvent(caller);
+  const withdrawEvent = new WithdrawRequestEvent(caller);
   generateEvent(withdrawEvent.toJson());
   return withdrawEvent.serialize();
 }
@@ -147,9 +158,6 @@ export function setWithdrawableFor(
     .nextString()
     .expect('operationId argument is missing');
   const amount = args.nextU64().expect('amount argument is missing');
-
-  removeWithdrawRequest(userAddress, operationId);
-
   assert(amount > 0, 'Amount must be greater than 0.');
 
   // assert that amount is at least the deposit amount
@@ -160,16 +168,34 @@ export function setWithdrawableFor(
     .expect('Blasting session is invalid');
   assert(amount >= blastingSessions.amount, 'Amount is less than the deposit.');
 
+  // remove the withdraw request
+  removeWithdrawRequest(userAddress, operationId);
+
+  // reimburse the user for the cost of the request withdraw operation
+  const amountToReimburse = costOfRequestWithdraw(userAddress, operationId);
+  generateEvent(
+    `[setWithdrawableFor] cost of the operation (amountToReimburse): ${amountToReimburse}`,
+  );
+  transferCoins(new Address(userAddress), amountToReimburse);
+
   // assert that the user has not already set a withdrawable amount
   const keyWithdrawable = withdrawableKeyOf(userAddress);
   assert(!Storage.has(keyWithdrawable), 'Withdrawable amount already set.');
+
   // TODO: insert here multisig check
+
   // save the amount as withdrawable
   Storage.set(keyWithdrawable, u64ToBytes(amount));
+  generateEvent(
+    `[setWithdrawableFor] cost of the key withdrawable: ${costOfKeyWithdrawable(
+      userAddress,
+    )}`,
+  );
 
   // assert that the caller sent enough coins for the storage fees and the amount to be set as withdrawable
   consolidatePayment(initialSCBalance, 0, 0, 0, amount);
 
+  // generate event and return
   const setWithdrawableForEvent = new SetWithdrawableEvent(userAddress, amount);
   generateEvent(setWithdrawableForEvent.toJson());
 
@@ -189,27 +215,34 @@ export function withdraw(_: StaticArray<u8>): StaticArray<u8> {
   const amountWithdrawableBytes = Storage.get(keyWithdrawable);
   const amountWithdrawable = bytesToU64(amountWithdrawableBytes);
   if (amountWithdrawable > balance()) {
+    // TODO: monitor this event
     generateEvent(
       'CRITICAL: not enough balance in the contract to withdraw ' +
         amountWithdrawable.toString() +
         ' by ' +
-        caller.toString(),
+        caller,
     );
     throw new Error('Not enough balance in the contract to withdraw');
   }
   transferCoins(new Address(caller), amountWithdrawable);
 
+  // remove the withdrawable amount
   Storage.del(keyWithdrawable);
+  const amountToReimburse = costOfKeyWithdrawable(caller);
+  generateEvent(`[withdraw] amountToReimburse: ${amountToReimburse}`);
+  transferCoins(
+    new Address(bytesToString(ownerAddress([]))),
+    amountToReimburse,
+  );
+
+  // remove the blasting session
   Storage.del(keyBlastingSession);
 
   consolidatePayment(initialSCBalance, 0, amountWithdrawable, 0, 0);
 
-  generateEvent(
-    'Withdrawn ' +
-      amountWithdrawable.toString() +
-      ' by ' +
-      Context.caller().toString(),
-  );
-
+  // generate event and return
+  const withdrawnEvent = new WithdrawnEvent(caller, amountWithdrawable);
+  generateEvent(withdrawnEvent.toJson());
   return amountWithdrawableBytes;
+  // return withdrawnEvent.serialize();
 }

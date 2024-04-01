@@ -24,11 +24,12 @@ import { BlastingSession } from './types/BlastingSession';
 export const MIN_BLASTING_AMOUNT: u64 = 10_000_000_000;
 
 export const BLASTING_ADDRESS_KEY = 'BLASTING_ADDRESS';
+export const WITHDRAW_REQUEST_KEY = 'WithdrawRequest_';
+export const WITHDRAWABLE_KEY = 'Withdrawable_';
 export const MAX_BLASTING_AMOUNT: u64 = 1_000_000_000_000_000;
 export const totalBlastingAmountKey = stringToBytes('TotalBlastingAmount');
 export const withdrawRequestListKey = stringToBytes('WithdrawRequestList');
 
-// internal functions
 export function updateWithdrawRequestOpIdOfBlastingSession(
   caller: string,
   withdrawRequestOpId: string,
@@ -55,6 +56,12 @@ export function addWithdrawRequest(caller: string, opId: string): void {
     'Withdraw request already exists for this user.',
   );
   Storage.set(keyWithdrawRequest, stringToBytes(opId));
+  generateEvent(
+    'addWithdrawRequest:60 ' +
+      keyWithdrawRequest.length.toString() +
+      ' ' +
+      Storage.get(keyWithdrawRequest).length.toString(),
+  );
   pushWithdrawRequest(caller);
 }
 
@@ -71,6 +78,10 @@ export function pushWithdrawRequest(caller: string): void {
       new Args().add(withdrawRequestList).serialize(),
     );
   }
+  generateEvent(
+    'pushWithdrawRequest:75 ' +
+      Storage.get(withdrawRequestListKey).length.toString(),
+  );
 }
 
 export function removeWithdrawRequest(
@@ -102,6 +113,10 @@ export function removeWithdrawRequestFromList(userAddress: string): void {
       new Args().add(withdrawRequestList).serialize(),
     );
   }
+  generateEvent(
+    'removeWithdrawRequestFromList:111 ' +
+      Storage.get(withdrawRequestListKey).length.toString(),
+  );
 }
 
 export function increaseTotalBlastingAmount(amount: u64): void {
@@ -133,11 +148,11 @@ export function blastingSessionKeyOf(userAddress: string): StaticArray<u8> {
 }
 
 export function withdrawableKeyOf(userAddress: string): StaticArray<u8> {
-  return stringToBytes('Withdrawable_' + userAddress);
+  return stringToBytes(WITHDRAWABLE_KEY + userAddress);
 }
 
 export function withdrawRequestKey(userAddress: string): StaticArray<u8> {
-  return stringToBytes('WithdrawRequest_' + userAddress);
+  return stringToBytes(WITHDRAW_REQUEST_KEY + userAddress);
 }
 
 export function blastingAddress(): string {
@@ -179,6 +194,9 @@ export function consolidatePayment(
   callerCredit: u64,
   callerDebit: u64,
 ): void {
+  // initialSCBalance - internalSCDebits - balance = 284
+  // balance = initialSCBalance - internalSCDebits + 284
+
   // How much we charge the caller:
   // caller_cost = initial_sc_balance + internal_sc_credits + caller_debit
   // - internal_sc_debits - caller_credit - get_balance()
@@ -197,14 +215,16 @@ export function consolidatePayment(
     const callerCost: u128 = callerCostPos - callerCostNeg;
     const delta: u128 = callerPayment - callerCost;
     if (callerPayment < callerCost) {
+      const storageCost = callerCost - callerPayment;
+
       // caller did not pay enough
       const message =
         'Need at least ' +
         callerCost.toString() +
         ' elementary coin units to pay but only ' +
         callerPayment.toString() +
-        ' were sent, delta: ' +
-        delta.toString();
+        ' were sent, storage cost: ' +
+        storageCost.toString();
       generateEvent('[consolidatePayment] ' + message);
       throw new Error(message);
     } else if (callerPayment > callerCost) {
@@ -222,7 +242,8 @@ export function consolidatePayment(
     }
   } else {
     // caller needs to be paid
-    const delta: u128 = callerCostNeg - callerCostPos + callerPayment;
+    const callerCost: u128 = callerCostNeg - callerCostPos;
+    const delta: u128 = callerCost + callerPayment;
     if (delta > u128.fromU64(u64.MAX_VALUE)) {
       throw new Error('Overflow');
     }
@@ -230,7 +251,9 @@ export function consolidatePayment(
       '[consolidatePayment] Sending ' +
         delta.toString() +
         ' to ' +
-        Context.caller().toString(),
+        Context.caller().toString() +
+        ', cost: ' +
+        callerCost.toString(),
     );
     transferCoins(Context.caller(), delta.toU64());
   }
