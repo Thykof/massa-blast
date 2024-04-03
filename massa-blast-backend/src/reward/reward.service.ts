@@ -1,29 +1,66 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import BigNumber from 'bignumber.js';
+
+const defaultPercentageFees = new BigNumber(10);
 
 @Injectable()
 export class RewardService {
-  constructor(private databaseService: DatabaseService) {}
+  private readonly logger = new Logger('REWARDS');
+  private nbCyclesFees = 3;
+  private percentageFees = defaultPercentageFees;
+  public readonly rollPrice = new BigNumber(100_000_000_000);
+  constructor(private databaseService: DatabaseService) {
+    this.nbCyclesFees = Number(process.env.NB_CYCLES_FEES) || 3;
+    this.percentageFees =
+      new BigNumber(process.env.PERCENT_FEES_ON_REWARDS ?? '10') ||
+      defaultPercentageFees;
+  }
 
   async getRewards(
     userAmount: bigint,
     fromDate: Date,
     toDate: Date,
   ): Promise<bigint> {
+    // apply cycles fees: add cycles to the fromDate
+    // 3 because stacking starts after 3 cycles
+    // + this.nbCyclesFees because we want to take 3 cycles for us as fees
+    fromDate = new Date(
+      fromDate.getTime() + 16 * 128 * (3 + this.nbCyclesFees) * 1000,
+    );
+
+    const totalRewards = await this.getRewardsWithoutFees(
+      new BigNumber(userAmount.toString()),
+      fromDate,
+      toDate,
+    );
+
+    const fees = this.calculateFees(totalRewards);
+
+    return BigInt(totalRewards.minus(fees).toFixed());
+  }
+
+  async getRewardsWithoutFees(
+    userAmount: BigNumber,
+    fromDate: Date,
+    toDate: Date,
+  ): Promise<BigNumber> {
     const totalRollsRecords = await this.databaseService.getTotalRolls(
       fromDate,
       toDate,
     );
 
-    let totalRewards = 0n;
+    let totalRewards = new BigNumber(0);
 
     for (let i = 0; i <= totalRollsRecords.length - 2; i++) {
-      totalRewards += this.rewardsDuringPeriod(
-        BigInt(totalRollsRecords[i].value),
-        BigInt(totalRollsRecords[i + 1].value),
-        totalRollsRecords[i].createdAt,
-        totalRollsRecords[i + 1].createdAt,
-        userAmount,
+      totalRewards = totalRewards.plus(
+        this.rewardsDuringPeriod(
+          totalRollsRecords[i].value,
+          totalRollsRecords[i + 1].value,
+          totalRollsRecords[i].createdAt,
+          totalRollsRecords[i + 1].createdAt,
+          userAmount,
+        ),
       );
     }
 
@@ -31,32 +68,52 @@ export class RewardService {
   }
 
   rewardsDuringPeriod(
-    totalRollsStart: bigint,
-    totalRollsEnd: bigint,
+    totalRollsStart: number,
+    totalRollsEnd: number,
     periodStart: Date,
     periodEnd: Date,
-    userAmount: bigint,
-  ): bigint {
-    const averageRolls = (totalRollsStart + totalRollsEnd) / 2n;
+    userAmount: BigNumber,
+  ): BigNumber {
+    const averageRolls = this.averageRolls(
+      new BigNumber(totalRollsStart),
+      new BigNumber(totalRollsEnd),
+    );
 
     const rewardsPerDay = this.rewardsPerRoll(averageRolls, userAmount);
-    const rewardsPerHour = rewardsPerDay / 24n;
-    const rewardsPerMinute = rewardsPerHour / 60n;
-    const rewardsPerSecond = rewardsPerMinute / 60n;
+    const rewardsPerHour = rewardsPerDay.dividedBy(24);
+    const rewardsPerMinute = rewardsPerHour.dividedBy(60);
+    const rewardsPerSecond = rewardsPerMinute.dividedBy(60);
 
-    const difference =
-      BigInt(periodEnd.getTime()) - BigInt(periodStart.getTime()); // in milliseconds
+    const difference = periodEnd.getTime() - periodStart.getTime(); // in milliseconds
 
-    return (rewardsPerSecond * difference) / 1000n;
+    return rewardsPerSecond.multipliedBy(difference).dividedBy(1000);
   }
 
-  private rewardsPerRoll(totalRolls: bigint, userAmount: bigint): bigint {
-    const totalMAS = 172_800_000_000_000n;
-    const productionRate = userAmount / 100n / totalRolls;
+  rewardsPerRoll(totalRolls: BigNumber, userAmount: BigNumber): BigNumber {
+    const totalMAS = new BigNumber(172_800_000_000_000);
+    const productionRate = userAmount.dividedBy(
+      totalRolls.multipliedBy(this.rollPrice),
+    );
 
-    const rewardsPerBlock = (totalMAS * productionRate * 7n) / 10n;
-    const rewardsPerEndorsement = (totalMAS * 16n * productionRate * 2n) / 100n;
+    const rewardsPerBlock = totalMAS
+      .multipliedBy(productionRate)
+      .multipliedBy(0.7);
+    const rewardsPerEndorsement = totalMAS
+      .multipliedBy(16)
+      .multipliedBy(productionRate)
+      .multipliedBy(0.02);
 
-    return rewardsPerBlock + rewardsPerEndorsement;
+    return rewardsPerBlock.plus(rewardsPerEndorsement);
+  }
+
+  averageRolls(
+    totalRollsStart: BigNumber,
+    totalRollsEnd: BigNumber,
+  ): BigNumber {
+    return totalRollsStart.plus(totalRollsEnd).dividedBy(2);
+  }
+
+  calculateFees(rewards: BigNumber): BigNumber {
+    return rewards.multipliedBy(this.percentageFees).dividedBy(100);
   }
 }
