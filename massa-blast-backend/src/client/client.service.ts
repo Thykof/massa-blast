@@ -18,7 +18,7 @@ const EXPIRY_PERIOD = 9;
 export class ClientService {
   private readonly logger = new Logger('CLIENT');
   public client: Client;
-  public blastContract: string = process.env.CONTRACT_ADDRESS;
+  public blastContract: string = process.env.ADDRESS_CONTRACT;
   private defaultFees = 1000n;
 
   public async onModuleInit(): Promise<void> {
@@ -117,6 +117,7 @@ export class ClientService {
       fee: this.defaultFees,
       amount: rollAmount,
     });
+    // TODO: logger an error if operation fails
     this.logger.log(`sellRolls operation ID: ${opId}`);
   }
 
@@ -125,6 +126,7 @@ export class ClientService {
       fee: this.defaultFees,
       amount: rollAmount,
     });
+    // TODO: logger an error if operation fails
     this.logger.log(`buyRolls operation ID: ${opId}`);
   }
 
