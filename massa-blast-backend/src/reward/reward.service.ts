@@ -37,7 +37,7 @@ export class RewardService {
 
     const fees = this.calculateFees(totalRewards);
 
-    return BigInt(totalRewards.minus(fees).toFixed());
+    return BigInt(totalRewards.minus(fees).toFixed(0));
   }
 
   async getRewardsWithoutFees(
@@ -86,8 +86,8 @@ export class RewardService {
   ): BigNumber {
     const averageRolls = this.averageRolls(
       // toFixed to avoid floating point issues, roll number should be an integer
-      new BigNumber(totalRollsStart.toFixed()),
-      new BigNumber(totalRollsEnd.toFixed()),
+      new BigNumber(totalRollsStart.toFixed(0)),
+      new BigNumber(totalRollsEnd.toFixed(0)),
     );
 
     const rewardsPerDay = this.rewardsPerRoll(averageRolls, userAmount);

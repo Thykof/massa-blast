@@ -4,6 +4,20 @@ import { DatabaseService } from '../database/database.service';
 import { TotalRollsRecord } from '../database/entities/TotalRollsRecord';
 import BigNumber from 'bignumber.js';
 
+export function generateDateArray(currentDate: Date, length: number): Date[] {
+  const datesArray: Date[] = [];
+
+  for (let i = 0; i < length; i++) {
+    // Push a new Date object to the array
+    datesArray.push(new Date(currentDate));
+
+    // Increment the date by 1 day
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return datesArray;
+}
+
 describe('RewardService', () => {
   let service: RewardService;
   const start = new Date('2021-01-01');
@@ -39,8 +53,6 @@ describe('RewardService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
-
-  describe('getRewards', () => {});
 
   describe('getRewardsWithoutFees', () => {
     it('limit case', async () => {
@@ -141,17 +153,3 @@ describe('RewardService', () => {
     });
   });
 });
-
-function generateDateArray(currentDate: Date, length: number): Date[] {
-  const datesArray: Date[] = [];
-
-  for (let i = 0; i < length; i++) {
-    // Push a new Date object to the array
-    datesArray.push(new Date(currentDate));
-
-    // Increment the date by 1 day
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-
-  return datesArray;
-}
