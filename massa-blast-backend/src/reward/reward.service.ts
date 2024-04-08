@@ -62,9 +62,19 @@ export class RewardService {
           userAmount,
         ),
       );
+
+      userAmount = this.compound(userAmount, totalRewards);
     }
 
     return totalRewards;
+  }
+  compound(userAmount: BigNumber, totalRewards: BigNumber): BigNumber {
+    const newAmount = userAmount.plus(totalRewards);
+    if (newAmount.isGreaterThan(this.rollPrice)) {
+      return newAmount;
+    }
+
+    return userAmount;
   }
 
   rewardsDuringPeriod(
@@ -75,8 +85,9 @@ export class RewardService {
     userAmount: BigNumber,
   ): BigNumber {
     const averageRolls = this.averageRolls(
-      new BigNumber(totalRollsStart),
-      new BigNumber(totalRollsEnd),
+      // toFixed to avoid floating point issues, roll number should be an integer
+      new BigNumber(totalRollsStart.toFixed()),
+      new BigNumber(totalRollsEnd.toFixed()),
     );
 
     const rewardsPerDay = this.rewardsPerRoll(averageRolls, userAmount);

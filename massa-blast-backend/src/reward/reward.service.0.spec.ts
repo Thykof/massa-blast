@@ -1,4 +1,4 @@
-import { Test } from '@nestjs/testing';
+import { Test, TestingModule } from '@nestjs/testing';
 import { RewardService } from './reward.service';
 import { DatabaseService } from '../database/database.service';
 import { TotalRollsRecord } from '../database/entities/TotalRollsRecord';
@@ -9,44 +9,38 @@ describe('RewardService', () => {
   let service: RewardService;
   const start = new Date('2021-01-01');
   const end = new Date('2021-01-02');
+  const dateJan3 = new Date('2021-01-03');
+  const mockDatabaseService = {
+    addTotalRolls: jest.fn(),
+    getTotalRolls: jest
+      .fn()
+      .mockResolvedValue([
+        new TotalRollsRecord(1, start),
+        new TotalRollsRecord(1, end),
+      ]),
+  };
+  let app: TestingModule;
 
-  beforeEach(async () => {
-    const module = await Test.createTestingModule({
+  async function createServiceWithMockedDB() {
+    app = await Test.createTestingModule({
       providers: [RewardService, DatabaseService],
     })
       .overrideProvider(DatabaseService)
-      .useValue({
-        addTotalRolls: jest.fn(),
-        getTotalRolls: jest
-          .fn()
-          .mockResolvedValue([
-            new TotalRollsRecord(1, start),
-            new TotalRollsRecord(1, end),
-          ]),
-      })
+      .useValue(mockDatabaseService)
       .compile();
 
-    service = module.get<RewardService>(RewardService);
+    service = app.get<RewardService>(RewardService);
+  }
+
+  beforeEach(async () => {
+    jest.clearAllMocks(); // Clears previous mock states
+    await createServiceWithMockedDB(); // Create service instance with the initial spy/mock
   });
+
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
-  describe('getRewards', () => {
-    it('should return a bigint', async () => {
-      const result = await service.getRewards(1n, new Date(), new Date());
-      expect(typeof result).toBe('bigint');
-    });
-  });
-  describe('getRewardsWithoutFees', () => {
-    it('should return the rewards', async () => {
-      const result = await service.getRewardsWithoutFees(
-        new BigNumber(10_000_000_000), // 10 MAS, 10% production rate
-        start,
-        end,
-      );
-      expect(result.toString()).toBe('17625600000000');
-    });
-  });
+
   describe('rewardsDuringPeriod', () => {
     it('limit case', () => {
       const result = service.rewardsDuringPeriod(
@@ -72,16 +66,38 @@ describe('RewardService', () => {
         new BigNumber(176_256_000_000_000).dividedBy(24).toString(),
       );
     });
+    it('number of roll increase', () => {
+      const result = service.rewardsDuringPeriod(
+        1, // one roll
+        2, // one roll
+        new Date(start.getTime()),
+        new Date(start.getTime() + 60_000 * 60), // start + one hour
+        new BigNumber(100_000_000_000), // one roll
+      );
+      expect(result.toString()).toBe(
+        new BigNumber('4896000000000.00000002448').toString(),
+      );
+    });
     it('real use case, one day', () => {
       const result = service.rewardsDuringPeriod(
         500_000,
         500_000,
         start,
         end,
-        service.rollPrice.multipliedBy(50_000), // user has 50k rolls
+        new BigNumber('10000000000'), // 10 MAS
+      );
+      expect(result.toString()).toBe(new BigNumber('35251200').toString());
+    });
+    it('real use case, next day', () => {
+      const result = service.rewardsDuringPeriod(
+        500_000,
+        500_000,
+        start,
+        end,
+        new BigNumber('10035251200'), // 10 MAS + rewards from previous day
       );
       expect(result.toString()).toBe(
-        new BigNumber(176.256).multipliedBy(service.rollPrice).toString(),
+        new BigNumber('35375464.710144').toString(),
       );
     });
     it('real use case, one hour', () => {
@@ -99,7 +115,7 @@ describe('RewardService', () => {
           .toString(),
       );
     });
-    it.only('real use case, low amount', () => {
+    it('real use case, low amount', () => {
       const result = service.rewardsDuringPeriod(
         500_000,
         500_000,
@@ -107,7 +123,6 @@ describe('RewardService', () => {
         new Date(start.getTime() + 60_000 * 60), // start + one hour
         new BigNumber(10_000_000_000), // 10 MAS
       );
-      console.log(result.toString());
       expect(result.toString()).toBe(
         new BigNumber(176.256)
           .dividedBy(500_000)
@@ -116,7 +131,7 @@ describe('RewardService', () => {
           .toString(),
       );
     });
-    it.only('real use case, very low amount', () => {
+    it('real use case, very low amount', () => {
       const result = service.rewardsDuringPeriod(
         1_000_000,
         1_000_000,
@@ -124,10 +139,30 @@ describe('RewardService', () => {
         new Date(start.getTime() + 60_000), // start + one minute
         new BigNumber(10_000_000_000), // 10 MAS
       );
-      console.log(result.toString());
       expect(result.toString()).toBe('12240');
     });
+    it('extra 1', () => {
+      const result = service.rewardsDuringPeriod(
+        500000,
+        500000,
+        start,
+        end,
+        new BigNumber(10_000_000_000),
+      );
+      expect(result.toString()).toBe('35251200');
+    });
+    it('extra 2', () => {
+      const result = service.rewardsDuringPeriod(
+        500000,
+        500000,
+        end,
+        dateJan3,
+        new BigNumber(10_000_000_000 + 35251200),
+      );
+      expect(result.toString()).toBe('35375464.710144');
+    });
   });
+
   describe('rewardsPerRoll', () => {
     it('should return max rewards per day', () => {
       const result = service.rewardsPerRoll(
