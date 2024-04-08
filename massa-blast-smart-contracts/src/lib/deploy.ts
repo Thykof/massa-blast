@@ -20,7 +20,7 @@ const secretKey = process.env.SECRET_KEY_FULLPOWER!;
 // Define deployment parameters
 const chainId = CHAIN_ID.Sandbox; // Choose the chain ID corresponding to the network you want to deploy to
 const maxGas = MAX_GAS_DEPLOYMENT; // Gas for deployment Default is the maximum gas allowed for deployment
-const fees = 0n; // Fees to be paid for deployment. Default is 0
+const fees = BigInt(process.env.FEES!); // Fees to be paid for deployment
 const waitFirstEvent = true;
 
 // Create an account using the private key

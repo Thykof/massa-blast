@@ -56,12 +56,6 @@ export function addWithdrawRequest(caller: string, opId: string): void {
     'Withdraw request already exists for this user.',
   );
   Storage.set(keyWithdrawRequest, stringToBytes(opId));
-  generateEvent(
-    'addWithdrawRequest:60 ' +
-      keyWithdrawRequest.length.toString() +
-      ' ' +
-      Storage.get(keyWithdrawRequest).length.toString(),
-  );
   pushWithdrawRequest(caller);
 }
 
@@ -78,10 +72,6 @@ export function pushWithdrawRequest(caller: string): void {
       new Args().add(withdrawRequestList).serialize(),
     );
   }
-  generateEvent(
-    'pushWithdrawRequest:75 ' +
-      Storage.get(withdrawRequestListKey).length.toString(),
-  );
 }
 
 export function removeWithdrawRequest(
@@ -113,10 +103,6 @@ export function removeWithdrawRequestFromList(userAddress: string): void {
       new Args().add(withdrawRequestList).serialize(),
     );
   }
-  generateEvent(
-    'removeWithdrawRequestFromList:111 ' +
-      Storage.get(withdrawRequestListKey).length.toString(),
-  );
 }
 
 export function increaseTotalBlastingAmount(amount: u64): void {
@@ -194,9 +180,6 @@ export function consolidatePayment(
   callerCredit: u64,
   callerDebit: u64,
 ): void {
-  // initialSCBalance - internalSCDebits - balance = 284
-  // balance = initialSCBalance - internalSCDebits + 284
-
   // How much we charge the caller:
   // caller_cost = initial_sc_balance + internal_sc_credits + caller_debit
   // - internal_sc_debits - caller_credit - get_balance()
@@ -242,8 +225,7 @@ export function consolidatePayment(
     }
   } else {
     // caller needs to be paid
-    const callerCost: u128 = callerCostNeg - callerCostPos;
-    const delta: u128 = callerCost + callerPayment;
+    const delta: u128 = callerCostNeg - callerCostPos + callerPayment;
     if (delta > u128.fromU64(u64.MAX_VALUE)) {
       throw new Error('Overflow');
     }
@@ -251,9 +233,7 @@ export function consolidatePayment(
       '[consolidatePayment] Sending ' +
         delta.toString() +
         ' to ' +
-        Context.caller().toString() +
-        ', cost: ' +
-        callerCost.toString(),
+        Context.caller().toString(),
     );
     transferCoins(Context.caller(), delta.toU64());
   }

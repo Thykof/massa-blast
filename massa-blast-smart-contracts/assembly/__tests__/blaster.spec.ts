@@ -68,7 +68,7 @@ function callSetWithdrawableAdmin(
   amount: u64,
 ): StaticArray<u8> {
   switchUser(adminAddress);
-  amount += 28_500_000;
+  amount += 17_900_000;
   mockBalance(
     contractAddress.toString(),
     balanceOf(contractAddress.toString()) + amount,

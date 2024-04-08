@@ -7,7 +7,7 @@
         "test": "asp --summary",
         "build": "npx massa-as-compile",
         "clean": "rimraf build",
-        "deploy": "npm run build && tsx src/deploy.ts",
+        "deploy": "npm run build && tsx src/scripts/deploy.ts",
         "e2e": "npx tsx src/tests/e2e.ts",
         "prettier": "prettier '**/src/**/*.ts' --check && as-prettier --check assembly",
         "prettier:fix": "prettier '**/src/**/*.ts' --write && as-prettier --write assembly",

@@ -2,6 +2,8 @@ import { Client, IBaseAccount } from '@massalabs/massa-web3';
 import { config } from 'dotenv';
 config();
 
+const fee = BigInt(process.env.FEES!);
+
 export async function withdraw(
   client: Client,
   baseAccount: IBaseAccount,
@@ -9,7 +11,7 @@ export async function withdraw(
 ) {
   return await client.smartContracts().callSmartContract(
     {
-      fee: 0n,
+      fee,
       targetAddress: contractAddress,
       targetFunction: 'withdraw',
       parameter: [],

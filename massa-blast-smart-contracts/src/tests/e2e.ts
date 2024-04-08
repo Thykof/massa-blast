@@ -11,6 +11,7 @@ import {
   STORAGE_BYTE_COST,
 } from '@massalabs/massa-web3';
 
+const fee = BigInt(process.env.FEES!);
 let contractAddress: string = process.env.ADDRESS_CONTRACT!;
 const userAddress = process.env.ADDRESS_USER_1!;
 const blastingAddress = process.env.ADDRESS_BLASTING!;
@@ -22,6 +23,7 @@ let rewards = fromMAS(1);
 let serviceFees = fromMAS(0.1);
 let withdrawRequestOpId = '';
 let withdrawableAmount = 0n;
+let initialUerBalance = 0n;
 
 async function deploy() {
   contractAddress = await deployBlaster();
@@ -32,7 +34,9 @@ async function deploy() {
 
 async function depositTest() {
   const { client, baseAccount } = await getClient(userSecretKey);
+  const initialBalanceBlasting = await getBalance(blastingAddress, client);
   const initialBalance = await getBalance(userAddress, client);
+  initialUerBalance = initialBalance;
   const operationId = await deposit(
     client,
     baseAccount,
@@ -56,8 +60,9 @@ async function depositTest() {
     'Balance should be less than initial',
   );
   assert(
-    (await getBalance(blastingAddress, client)) === depositAmount,
-    'Blasting address balance should be the deposit amount',
+    (await getBalance(blastingAddress, client)) - initialBalanceBlasting ===
+      depositAmount,
+    'Blasting address balance should be increased by deposit amount',
   );
 }
 
@@ -124,22 +129,13 @@ async function withdrawTest() {
     initialBalanceContract,
     balanceContract,
   );
-  assert(balance > initialBalance, 'Balance should be greater than initial');
   assert(
-    balance > balance + withdrawableAmount,
-    'Balance should be greater than initial',
-  );
-  assert(
-    balance === withdrawableAmount,
-    'Balance should be the withdrawable amount',
+    initialUerBalance + withdrawableAmount - depositAmount === balance,
+    'User balance should be increased by withdrawable amount',
   );
   assert(
     (await getBalance(contractAddress, client)) === 0n,
     'Contract balance should be 0',
-  );
-  assert(
-    (await getBalance(blastingAddress, client)) === 0n,
-    'Blasting address balance should be 0',
   );
 }
 
@@ -147,20 +143,19 @@ async function topUp(recipientAddress: string, amount: bigint) {
   const { client } = await getClient(ownerSecretKey);
   const operationId = (
     await client.wallet().sendTransaction({
-      fee: 0n,
+      fee,
       amount,
       recipientAddress,
     })
   )[0];
-  const { status } = await waitOp(client, operationId, false);
+  const { status } = await waitOp(client, operationId);
   console.log(`top up operationId ${operationId} status: ${status}`);
-  await new Promise((resolve) => setTimeout(resolve, 130_000));
 }
 
 async function main() {
   await deploy();
-  // await topUp(userAddress, fromMAS(100));
-  // await topUp(blastingAddress, BASE_ACCOUNT_CREATION_COST);
+  await topUp(userAddress, fromMAS(100));
+  await topUp(blastingAddress, BASE_ACCOUNT_CREATION_COST);
   await depositTest();
   await requestWithdrawTest();
   await setWithdrawableForTest();
@@ -168,6 +163,13 @@ async function main() {
 }
 
 await main();
+
+/**
+ * TODO:
+ * - create an account for owner different than fullpower
+ * - assert the balances better
+ *
+ */
 
 /**
  * - in deposit user pays for keyBlastingSession (156)

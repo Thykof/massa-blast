@@ -2,6 +2,8 @@ import { Client, fromMAS, IBaseAccount } from '@massalabs/massa-web3';
 import { config } from 'dotenv';
 config();
 
+const fee = BigInt(process.env.FEES!);
+
 export async function requestWithdraw(
   client: Client,
   baseAccount: IBaseAccount,
@@ -13,13 +15,12 @@ export async function requestWithdraw(
     parameter: [],
     coins: fromMAS(0.1),
   });
-  console.log(readOnlyCall.info.gas_cost);
-  // 28677423
+  console.log(readOnlyCall.info.gas_cost); // 28677423
   return await client.smartContracts().callSmartContract(
     {
-      fee: 0n,
+      fee,
       maxGas: BigInt(Math.floor(readOnlyCall.info.gas_cost * 1.2)),
-      coins: fromMAS(0.1),
+      coins: fromMAS(0.023_70_000),
       targetAddress: contractAddress,
       targetFunction: 'requestWithdraw',
       parameter: [],
