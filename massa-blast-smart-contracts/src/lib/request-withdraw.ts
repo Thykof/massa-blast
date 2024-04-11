@@ -14,6 +14,7 @@ export async function requestWithdraw(
     targetFunction: 'requestWithdraw',
     parameter: [],
     coins: fromMAS(0.1),
+    fee,
   });
   console.log(readOnlyCall.info.gas_cost); // 28677423
   return await client.smartContracts().callSmartContract(
