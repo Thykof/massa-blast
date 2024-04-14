@@ -10,10 +10,11 @@ import { msToDateTimeWithTimeZone } from '../../utils';
 import { useEffect } from 'react';
 import { Button, Spinner } from '@massalabs/react-ui-kit';
 
-export function ActiveSession() {
+export function ActiveSession(props: { refetch: () => void }) {
+  const { refetch } = props;
   const { connectedAccount, massaClient } = useAccountStore();
 
-  const { session, refetch } = useReadBlastingSession(
+  const { session } = useReadBlastingSession(
     massaClient,
     connectedAccount?.address(),
   );
@@ -39,6 +40,7 @@ export function ActiveSession() {
             customClass="w-1/3"
             disabled={isPending && !!opId}
           >
+            {isPending && !!opId && <Spinner customClass="mr-4" />}
             Request withdraw
           </Button>
         </div>
@@ -53,6 +55,7 @@ export function ActiveSession() {
             customClass="w-1/3"
             disabled={isPending && !!opId}
           >
+            {isPending && !!opId && <Spinner customClass="mr-4" />}
             Withdraw
           </Button>
         </div>
@@ -68,7 +71,7 @@ export function ActiveSession() {
   };
 
   if (session === undefined) {
-    return 'No session found';
+    return 'No session found.';
   }
 
   return (
@@ -82,6 +85,12 @@ export function ActiveSession() {
         <p className="mas-body">
           Started at: {msToDateTimeWithTimeZone(Number(session.startTimestamp))}
         </p>
+        {!!withdrawable && (
+          <p className="mas-body">
+            Withdrawable:{' '}
+            {formatAmount(withdrawable.toString()).amountFormattedFull} MAS
+          </p>
+        )}
       </div>
       <section className="mb-10">{subSection()}</section>
     </Card>

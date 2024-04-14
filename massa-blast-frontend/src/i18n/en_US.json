@@ -6,7 +6,7 @@
     "requesting": "Requesting",
     "request-success": "Successfully requested",
     "request-failed": "Request failed",
-    "withdraw": "Withdrawing",
+    "withdrawing": "Withdrawing",
     "withdraw-success": "Successfully withdrawn",
     "withdraw-failed": "Withdraw failed",
     "failed-timeout": "Operation failed due to timeout, please retry with more fees."

@@ -1,5 +1,4 @@
 import { generateExplorerLink } from '../../utils/massa-utils';
-import Intl from '../../i18n/i18n';
 
 type OperationToastProps = {
   title: string;
@@ -17,7 +16,7 @@ export function OperationToast({ title, operationId }: OperationToastProps) {
           rel="noreferrer"
           className="mas-caption-underline self-center mr-3"
         >
-          {Intl.t('toast.explorer')}
+          Explorer
         </a>
       )}
     </div>

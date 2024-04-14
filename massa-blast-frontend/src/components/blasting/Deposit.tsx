@@ -40,11 +40,6 @@ export function Deposit(props: { refetch: () => void }) {
       return;
     }
 
-    console.log(
-      newAmountInNonaMas,
-      DEPOSIT_STORAGE_COST,
-      fromMAS(balance || '0'),
-    );
     if (newAmountInNonaMas + DEPOSIT_STORAGE_COST > fromMAS(balance || '0')) {
       setError('Insufficient balance (including storage cost)');
       return;
