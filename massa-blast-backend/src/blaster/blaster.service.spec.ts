@@ -15,7 +15,6 @@ describe('BlasterService', () => {
   let clientService: ClientService;
   let getBlastingSessionsOfPendingWithdrawRequests: jest.SpyInstance;
   let getBalance: jest.SpyInstance;
-  let setWithdrawableFor: jest.SpyInstance;
   let getAllDeferredCredits: jest.SpyInstance;
   let sellRolls: jest.SpyInstance;
   let buyRolls: jest.SpyInstance;
@@ -35,9 +34,7 @@ describe('BlasterService', () => {
       .spyOn(clientService, 'getBlastingSessionsOfPendingWithdrawRequests')
       .mockResolvedValue([]);
     getBalance = jest.spyOn(clientService, 'getBalance').mockResolvedValue(0n);
-    setWithdrawableFor = jest
-      .spyOn(clientService, 'setWithdrawableFor')
-      .mockImplementation();
+    jest.spyOn(clientService, 'setWithdrawableFor').mockImplementation();
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(0n);
@@ -109,9 +106,6 @@ describe('BlasterService', () => {
         ),
       ]);
     getBalance = jest.spyOn(clientService, 'getBalance').mockResolvedValue(0n);
-    setWithdrawableFor = jest
-      .spyOn(clientService, 'setWithdrawableFor')
-      .mockImplementation();
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(0n);
@@ -132,9 +126,6 @@ describe('BlasterService', () => {
     getBalance = jest
       .spyOn(clientService, 'getBalance')
       .mockResolvedValue(100_000_000_000n);
-    setWithdrawableFor = jest
-      .spyOn(clientService, 'setWithdrawableFor')
-      .mockImplementation();
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(0n);
@@ -163,9 +154,6 @@ describe('BlasterService', () => {
     getBalance = jest
       .spyOn(clientService, 'getBalance')
       .mockResolvedValue(100_000_000_000n);
-    setWithdrawableFor = jest
-      .spyOn(clientService, 'setWithdrawableFor')
-      .mockImplementation();
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(0n);
@@ -203,9 +191,6 @@ describe('BlasterService', () => {
     getBalance = jest
       .spyOn(clientService, 'getBalance')
       .mockResolvedValue(200_000_000_000n);
-    setWithdrawableFor = jest
-      .spyOn(clientService, 'setWithdrawableFor')
-      .mockImplementation();
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(0n);
@@ -250,9 +235,6 @@ describe('BlasterService', () => {
     getBalance = jest
       .spyOn(clientService, 'getBalance')
       .mockResolvedValue(100_000_000_000n);
-    setWithdrawableFor = jest
-      .spyOn(clientService, 'setWithdrawableFor')
-      .mockImplementation();
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(0n);
@@ -297,9 +279,6 @@ describe('BlasterService', () => {
     getBalance = jest
       .spyOn(clientService, 'getBalance')
       .mockResolvedValue(400_000_000_000n);
-    setWithdrawableFor = jest
-      .spyOn(clientService, 'setWithdrawableFor')
-      .mockImplementation();
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(0n);
@@ -354,9 +333,6 @@ describe('BlasterService', () => {
     getBalance = jest
       .spyOn(clientService, 'getBalance')
       .mockResolvedValue(300_000_000_000n);
-    setWithdrawableFor = jest
-      .spyOn(clientService, 'setWithdrawableFor')
-      .mockImplementation();
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(0n);
@@ -412,9 +388,6 @@ describe('BlasterService', () => {
     getBalance = jest
       .spyOn(clientService, 'getBalance')
       .mockResolvedValue(300_000_000_000n);
-    setWithdrawableFor = jest
-      .spyOn(clientService, 'setWithdrawableFor')
-      .mockImplementation();
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(200_000_000_000n);
@@ -469,9 +442,6 @@ describe('BlasterService', () => {
     getBalance = jest
       .spyOn(clientService, 'getBalance')
       .mockResolvedValue(100_000_000_000n);
-    setWithdrawableFor = jest
-      .spyOn(clientService, 'setWithdrawableFor')
-      .mockImplementation();
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(200_000_000_000n);
@@ -516,9 +486,6 @@ describe('BlasterService', () => {
     getBalance = jest
       .spyOn(clientService, 'getBalance')
       .mockResolvedValue(600_000_000_000n);
-    setWithdrawableFor = jest
-      .spyOn(clientService, 'setWithdrawableFor')
-      .mockImplementation();
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(200_000_000_000n);

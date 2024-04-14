@@ -62,14 +62,12 @@ export class BlasterService {
         break;
       }
 
-      this.logger.log(
-        `setWithdrawableFor ${session.amount} to ${session.userAddress}`,
-      );
       await this.setWithdrawableFor(session);
       remainingBalance -= session.amount;
       remainingToDistribute -= session.amount;
     }
 
+    this.logger.log('Distribute done');
     this.logger.log(`Remaining balance: ${remainingBalance}`);
     this.logger.log(`Remaining to distribute: ${remainingToDistribute}`);
 
@@ -80,14 +78,21 @@ export class BlasterService {
   }
 
   public async setWithdrawableFor(session: BlastingSession) {
+    const rewards = await this.rewardService.getRewards(
+      session.amount,
+      new Date(Number(session.startTimestamp)),
+      new Date(Number(session.endTimestamp)),
+    );
+
+    const amountToDistribute = session.amount + rewards;
+
+    this.logger.log(
+      `Setting withdrawable ${amountToDistribute} for ${session.userAddress}`,
+    );
     await this.clientService.setWithdrawableFor(
       session.userAddress,
       session.withdrawRequestOpId,
-      await this.rewardService.getRewards(
-        session.amount,
-        new Date(Number(session.startTimestamp)),
-        new Date(Number(session.endTimestamp)),
-      ),
+      amountToDistribute,
     );
   }
 
@@ -120,6 +125,7 @@ export class BlasterService {
     totalFutureBalance: bigint,
     remainingToDistribute: bigint,
   ) {
+    // TODO: don't sell if the roll amount is 1, we need always 1 roll at least
     const rollAmount = this.howManyRollsToSell(
       totalFutureBalance,
       remainingToDistribute,

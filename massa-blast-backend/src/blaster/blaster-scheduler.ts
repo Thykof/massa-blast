@@ -10,7 +10,8 @@ export class BlasterSchedulerService {
     await this.blasterService.blast();
   }
 
-  @Interval(10_000)
+  @Interval(3 * 60 * 1000) // every 3 minutes to wait for finality of the previous operations
+  // @Interval(10000) // DEBUG
   async blasting() {
     this.blasterService.blast();
   }

@@ -1,6 +1,7 @@
 import {
   Args,
   Client,
+  EOperationStatus,
   fromMAS,
   IAddressInfo,
   MAX_GAS_CALL,
@@ -100,34 +101,47 @@ export class ClientService {
     operationId: string,
     amount: bigint,
   ): Promise<void> {
-    const opId = await this.client.smartContracts().callSmartContract({
+    const callData = {
       fee: this.defaultFees,
+      coins: amount + fromMAS(0.007_800_000),
       targetAddress: this.blastContract,
       targetFunction: 'setWithdrawableFor',
       parameter: new Args()
         .addString(userAddress)
         .addString(operationId)
         .addU64(amount),
-    });
+    };
+    const readOnlyEstimation = await this.client
+      .smartContracts()
+      .readSmartContract(callData);
+
+    let maxGas = BigInt(Math.floor(readOnlyEstimation.info.gas_cost * 1.2));
+    maxGas = maxGas > MAX_GAS_CALL ? MAX_GAS_CALL : maxGas;
+    const opId = await this.client
+      .smartContracts()
+      .callSmartContract({ ...callData, maxGas });
     this.logger.log(`setWithdrawableFor operation ID: ${opId}`);
+    await this.waitOperation(opId);
   }
 
   public async sellRolls(rollAmount: bigint): Promise<void> {
-    const opId = await this.client.wallet().sellRolls({
+    const opIds = await this.client.wallet().sellRolls({
       fee: this.defaultFees,
       amount: rollAmount,
     });
-    // TODO: logger an error if operation fails
+    const opId = opIds[0];
     this.logger.log(`sellRolls operation ID: ${opId}`);
+    await this.waitOperation(opId);
   }
 
   public async buyRolls(rollAmount: bigint): Promise<void> {
-    const opId = await this.client.wallet().buyRolls({
+    const opIds = await this.client.wallet().buyRolls({
       fee: this.defaultFees,
       amount: rollAmount,
     });
-    // TODO: logger an error if operation fails
+    const opId = opIds[0];
     this.logger.log(`buyRolls operation ID: ${opId}`);
+    await this.waitOperation(opId);
   }
 
   private async getAddress(address: string): Promise<IAddressInfo | undefined> {
@@ -137,5 +151,54 @@ export class ClientService {
       return undefined;
     }
     return res[0];
+  }
+
+  private async waitOperation(operationId: string): Promise<void> {
+    let status: EOperationStatus;
+    try {
+      status = await this.client
+        .smartContracts()
+        .awaitMultipleRequiredOperationStatus(
+          operationId,
+          [
+            EOperationStatus.SPECULATIVE_ERROR,
+            EOperationStatus.FINAL_ERROR,
+            EOperationStatus.FINAL_SUCCESS,
+          ],
+          90_000,
+        );
+    } catch (error) {
+      this.logger.error(`Operation ${operationId} error ${error}`);
+    }
+
+    if (
+      [
+        EOperationStatus.FINAL_ERROR,
+        EOperationStatus.SPECULATIVE_ERROR,
+      ].includes(status)
+    ) {
+      this.logger.error(`Operation ${operationId} failed`);
+      this.logSmartContractEvents(operationId);
+    } else {
+      this.logger.log(`Operation ${operationId} succeeded`);
+    }
+  }
+
+  private logSmartContractEvents(operationId: string): void {
+    this.client
+      .smartContracts()
+      .getFilteredScOutputEvents({
+        emitter_address: null,
+        start: null,
+        end: null,
+        original_caller_address: null,
+        original_operation_id: operationId,
+        is_final: null,
+      })
+      .then((events) => {
+        events.map((l) =>
+          this.logger.error(`opId ${operationId}: execution error ${l.data}`),
+        );
+      });
   }
 }

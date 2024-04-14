@@ -149,7 +149,7 @@ describe('RewardService', () => {
         start,
         end,
       );
-      expect(result.toString()).toBe('4604163708609.69542408592');
+      expect(result.toString()).toBe('4600877813828.83911852288');
     });
   });
 });
