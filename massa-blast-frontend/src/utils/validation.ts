@@ -1,4 +1,4 @@
-import { Address, fromMAS } from '@massalabs/massa-web3';
+import { fromMAS } from '@massalabs/massa-web3';
 
 export const validateAmount = (amount: string) => {
   if (!amount) {

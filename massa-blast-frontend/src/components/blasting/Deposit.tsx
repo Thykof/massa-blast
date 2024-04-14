@@ -6,19 +6,23 @@ import { useAccountStore } from '../../store';
 import { useBalance } from '../../utils/fetchBalance';
 import { useReadBlastingSession } from '../../utils/read-sc';
 import Intl from '../../i18n/i18n';
+import { generateExplorerLink } from '../../utils/massa-utils';
 
 const MINIMAL_DEPOSIT = 10_000_000_000n;
 
 export function Deposit() {
-  const { connectedAccount } = useAccountStore();
-  const { refetch } = useReadBlastingSession(connectedAccount?.address());
+  const { connectedAccount, massaClient } = useAccountStore();
+  const { refetch } = useReadBlastingSession(
+    massaClient,
+    connectedAccount?.address(),
+  );
   const balance = useBalance(connectedAccount);
   const { opId, isPending, isSuccess, deposit } = useWrite();
 
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
 
-  function handleSetAmount(value) {
+  function handleSetAmount(value: string) {
     setError('');
     const newAmount = value.replace(/[^0-9.-]/g, ''); // Remove non-numeric characters
 
@@ -46,7 +50,7 @@ export function Deposit() {
     if (isSuccess) {
       refetch();
     }
-  }, [isSuccess]);
+  }, [isSuccess, refetch]);
 
   function handleSubmit() {
     deposit(fromMAS(amount));

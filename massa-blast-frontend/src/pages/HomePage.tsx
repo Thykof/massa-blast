@@ -2,15 +2,17 @@ import { ConnectMassaWallet } from '../components/ConnectMassaWallets/ConnectMas
 import { useAccountStore } from '../store';
 import { Card } from '../components/Card';
 import { useReadBlastingSession, useTotalAmount } from '../utils/read-sc';
-import React from 'react';
 import { Deposit } from '../components/blasting/Deposit';
 import { ActiveSession } from '../components/blasting/ActiveSession';
 
 export default function HomePage() {
-  const { connectedAccount, currentProvider } = useAccountStore();
+  const { connectedAccount, currentProvider, massaClient } = useAccountStore();
 
-  const { session } = useReadBlastingSession(connectedAccount?.address());
-  const { totalAmount } = useTotalAmount();
+  const { session } = useReadBlastingSession(
+    massaClient,
+    connectedAccount?.address(),
+  );
+  const { totalAmount } = useTotalAmount(massaClient);
 
   const connected = !!connectedAccount && !!currentProvider;
 

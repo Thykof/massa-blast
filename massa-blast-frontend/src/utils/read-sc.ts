@@ -1,17 +1,17 @@
-import { Args, bytesToU64 } from '@massalabs/massa-web3';
+import { Args, bytesToU64, Client } from '@massalabs/massa-web3';
 import { SC_ADDRESS } from '../const/sc';
 import { BlastingSession } from '../types/BlastingSession';
 import { useCallback, useEffect, useState } from 'react';
 import { formatAmount } from './parseAmount';
 
-export function useReadBlastingSession(address?: string) {
+export function useReadBlastingSession(massaClient?: Client, address?: string) {
   const [session, setSession] = useState<BlastingSession>();
 
   const refetch = useCallback(() => {
     if (address) {
-      getBlastingSession(address).then((s) => setSession(s));
+      getBlastingSession(address, massaClient).then((s) => setSession(s));
     }
-  }, [address]);
+  }, [address, massaClient]);
 
   refetch();
 
@@ -23,8 +23,12 @@ export function useReadBlastingSession(address?: string) {
 
 async function getBlastingSession(
   address: string,
+  massaClient?: Client,
 ): Promise<BlastingSession | undefined> {
-  const res = await client.smartContracts().readSmartContract({
+  if (!massaClient) {
+    return undefined;
+  }
+  const res = await massaClient.smartContracts().readSmartContract({
     targetAddress: SC_ADDRESS,
     targetFunction: 'blastingSessionOf',
     parameter: new Args().addString(address),
@@ -40,11 +44,11 @@ async function getBlastingSession(
   return session;
 }
 
-export function useTotalAmount() {
+export function useTotalAmount(massaClient?: Client) {
   const [totalAmount, setTotalAmount] = useState<string>();
 
   useEffect(() => {
-    getTotalAmount().then((s) =>
+    getTotalAmount(massaClient).then((s) =>
       setTotalAmount(formatAmount(s.toString()).amountFormattedFull),
     );
   });
@@ -52,10 +56,15 @@ export function useTotalAmount() {
   return { totalAmount };
 }
 
-async function getTotalAmount(): Promise<bigint> {
-  const res = await client.smartContracts().readSmartContract({
+async function getTotalAmount(massaClient?: Client): Promise<bigint> {
+  if (!massaClient) {
+    return BigInt(0);
+  }
+
+  const res = await massaClient.smartContracts().readSmartContract({
     targetAddress: SC_ADDRESS,
     targetFunction: 'totalBlastingAmount',
+    parameter: [],
   });
 
   return bytesToU64(res.returnValue);

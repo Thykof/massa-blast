@@ -6,11 +6,11 @@ import {
 
 export class BlastingSession implements ISerializable<BlastingSession> {
   constructor(
-    public startTimestamp: bigint = 0,
-    public amount: bigint = 0,
+    public startTimestamp: bigint = 0n,
+    public amount: bigint = 0n,
     public userAddress: string = '',
     public withdrawRequestOpId: string = '',
-    public endTimestamp: bigint = 0,
+    public endTimestamp: bigint = 0n,
   ) {}
 
   serialize(): Uint8Array {
