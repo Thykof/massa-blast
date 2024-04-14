@@ -15,7 +15,7 @@ export async function setWithdrawableFor(
   return await client.smartContracts().callSmartContract(
     {
       fee,
-      coins: amount + fromMAS(0.007_80_000),
+      coins: amount + fromMAS(0.007_800_000),
       targetAddress: contractAddress,
       targetFunction: 'setWithdrawableFor',
       parameter: new Args()

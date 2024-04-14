@@ -19,11 +19,7 @@ import {
   ownerAddress,
 } from '@massalabs/sc-standards/assembly/contracts/utils/ownership';
 import { _setOwner } from '@massalabs/sc-standards/assembly/contracts/utils/ownership-internal';
-import {
-  BLASTING_ADDRESS_KEY,
-  consolidatePayment,
-  selfDestruct,
-} from './blaster-internal';
+import { BLASTING_ADDRESS_KEY, consolidatePayment } from './blaster-internal';
 
 const REQUEST_CHANGE_OWNER_TIMESTAMP_KEY = stringToBytes(
   'REQUEST_CHANGE_OWNER_TIMESTAMP',
@@ -185,15 +181,4 @@ export function ownerWithdraw(binaryArgs: StaticArray<u8>): void {
   );
 
   consolidatePayment(initialSCBalance, 0, amount, 0, 0);
-}
-
-export function destroy(_: StaticArray<u8>): StaticArray<u8> {
-  throw new Error('Not implemented');
-  onlyOwner();
-  selfDestruct(bytesToString(ownerAddress([])));
-  return [];
-}
-
-export function upgrade(_: StaticArray<u8>): StaticArray<u8> {
-  throw new Error('Not implemented');
 }

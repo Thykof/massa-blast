@@ -43,10 +43,7 @@ import {
 } from '../blaster-internal';
 import { isPaused, PAUSED_KEY } from '../blaster-admin';
 import { blastingSessionOf } from '../blaster-read';
-import {
-  costOfKeyWithdrawable,
-  costOfRequestWithdraw,
-} from '../storage-cost';
+import { costOfKeyWithdrawable, costOfRequestWithdraw } from '../storage-cost';
 import { WithdrawnEvent } from '../events/WithdrawnEvent';
 
 // Exports

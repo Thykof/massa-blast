@@ -57,8 +57,7 @@ export function withdrawable(binaryArgs: StaticArray<u8>): StaticArray<u8> {
   if (!Storage.has(key)) {
     return u64ToBytes(0);
   }
-  const amountWithdrawableBytes = Storage.get(key);
-  return amountWithdrawableBytes;
+  return Storage.get(key);
 }
 
 export function blastingSessionOf(

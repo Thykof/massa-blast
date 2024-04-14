@@ -13,7 +13,7 @@ export async function deposit(
   return await client.smartContracts().callSmartContract(
     {
       fee,
-      coins: amount + fromMAS(0.015_80_000),
+      coins: amount + fromMAS(0.015_800_000),
       targetAddress: contractAddress,
       targetFunction: 'deposit',
       parameter: new Args().addU64(amount),
