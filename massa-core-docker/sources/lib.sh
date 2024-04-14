@@ -78,15 +78,6 @@ CheckOrCreateWalletAndNodeKey() {
 }
 
 #############################################################
-# FONCTION = GetMASAmount
-# DESCRIPTION = Check MAS amount on active wallet
-# RETURN = MAS amount
-#############################################################
-GetMASAmount() {
-	massa-cli -j wallet_info | jq -r '.[].address_info.final_balance'
-}
-
-#############################################################
 # FONCTION = CheckNodeRam
 # DESCRIPTION = Buy roll if MAS amount > 200 or if candidate roll < 1 and MAS amount >= 100
 # RETURN = NodeRamStatus 0 for OK Logs for KO

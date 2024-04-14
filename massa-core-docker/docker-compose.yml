@@ -1,7 +1,10 @@
 version: "3"
 services:
   massa-core:
-    build: .
+    build:
+      context: .
+      args:
+        - VERSION=MAIN.2.1
     container_name: massa-core
     restart: always
     environment:
