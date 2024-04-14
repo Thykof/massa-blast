@@ -8,7 +8,7 @@ import { ActiveSession } from '../components/blasting/ActiveSession';
 export default function HomePage() {
   const { connectedAccount, currentProvider, massaClient } = useAccountStore();
 
-  const { session } = useReadBlastingSession(
+  const { session, refetch } = useReadBlastingSession(
     massaClient,
     connectedAccount?.address(),
   );
@@ -20,15 +20,15 @@ export default function HomePage() {
     if (!connected) {
       return (
         <Card>
-          <h3 className="mas-h3">Connect a wallet to start</h3>
+          <h3 className="mas-h3">Connect a wallet to start.</h3>
         </Card>
       );
     }
 
-    if (session) {
+    if (!session) {
       return (
         <Card>
-          <Deposit />
+          <Deposit refetch={refetch} />
         </Card>
       );
     }
@@ -42,19 +42,12 @@ export default function HomePage() {
 
   return (
     <div className="sm:w-full md:max-w-4xl mx-auto">
-      <div className="flex justify-between mb-2">
-        <img
-          src="/logo_massa.svg"
-          alt="Massa logo"
-          style={{ height: '64px' }}
-        />
-      </div>
+      <div className="flex justify-between mb-2"></div>
       <div className="p-5">
         <section className="mb-4 p-2">
-          <p className="mas-title mb-2">Massa Blast</p>
+          <p className="mas-title mb-2 text-center">Massa Blast</p>
           <h4 className="mas-body">Stack your MAS without running a node!</h4>
-          (totalAmount ? (<p>{totalAmount} MAS is already blasting!</p>
-          ))
+          {totalAmount && <p>{totalAmount} MAS is already blasting!</p>}
         </section>
         <section className="mb-10">
           <Card>

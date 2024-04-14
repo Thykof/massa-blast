@@ -27,7 +27,7 @@ function minBigInt(a: bigint, b: bigint) {
 
 export const DEPOSIT_STORAGE_COST = 15_800_000n;
 
-export function useWrite(client?: Client) {
+export function useWrite(massaClient?: Client) {
   const [isPending, setIsPending] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isError, setIsError] = useState(false);
@@ -39,7 +39,7 @@ export function useWrite(client?: Client) {
     messages: ToasterMessage,
     coins = BigInt(0),
   ) {
-    if (!client) {
+    if (!massaClient) {
       throw new Error('Massa client not found');
     }
     if (isPending) {
@@ -59,7 +59,7 @@ export function useWrite(client?: Client) {
       fee: DEFAULT_OP_FEES,
     } as ICallData;
 
-    client
+    massaClient
       .smartContracts()
       .readSmartContract(callData)
       .then((response) => {
@@ -68,7 +68,7 @@ export function useWrite(client?: Client) {
       })
       .then((maxGas: bigint) => {
         callData.maxGas = maxGas;
-        return client.smartContracts().callSmartContract(callData);
+        return massaClient.smartContracts().callSmartContract(callData);
       })
       .then((opId) => {
         operationId = opId;
@@ -87,7 +87,7 @@ export function useWrite(client?: Client) {
             duration: Infinity,
           },
         );
-        return client
+        return massaClient
           .smartContracts()
           .awaitMultipleRequiredOperationStatus(opId, [
             EOperationStatus.SPECULATIVE_ERROR,
@@ -141,7 +141,7 @@ export function useWrite(client?: Client) {
               />
             </ToastContent>
           ));
-          logSmartContractEvents(client, operationId);
+          logSmartContractEvents(massaClient, operationId);
         } else {
           toast.error((t) => (
             <ToastContent t={t}>

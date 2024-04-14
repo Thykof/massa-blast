@@ -1,7 +1,5 @@
 import { Client, ClientFactory } from '@massalabs/massa-web3';
 import { IAccount, IProvider } from '@massalabs/wallet-provider';
-import { _getFromStorage, _setInStorage } from '../utils/storage';
-import { LAST_USED_ACCOUNT } from '../const/const';
 import { SUPPORTED_MASSA_WALLETS } from '../const/connect-massa-wallet';
 
 async function handleBearbyAccountChange(
@@ -79,15 +77,6 @@ const accountStore = (
         return;
       }
 
-      let lastUsedAccount = '';
-      const storedAccount = _getFromStorage(LAST_USED_ACCOUNT);
-      if (storedAccount) {
-        const { provider, address } = JSON.parse(storedAccount);
-        if (provider === currentProvider?.name()) {
-          lastUsedAccount = address;
-        }
-      }
-
       if (!get().networkObserver) {
         const networkObserver = currentProvider.listenNetworkChanges(
           async () => {
@@ -144,9 +133,7 @@ const accountStore = (
         .then((accounts) => {
           set({ accounts });
 
-          const selectedAccount =
-            accounts.find((account) => account.address() === lastUsedAccount) ||
-            accounts[0];
+          const selectedAccount = accounts[0];
           get().setConnectedAccount(selectedAccount);
         })
         .catch((error) => {
@@ -178,13 +165,6 @@ const accountStore = (
       const currentProvider = get().currentProvider;
       if (!currentProvider) throw new Error('No provider found');
       const provider = currentProvider;
-      _setInStorage(
-        LAST_USED_ACCOUNT,
-        JSON.stringify({
-          provider: provider?.name(),
-          address: connectedAccount.address(),
-        }),
-      );
       // update the massa client with the new account
       set({
         massaClient: await ClientFactory.fromWalletProvider(

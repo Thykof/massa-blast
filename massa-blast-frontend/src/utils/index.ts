@@ -18,7 +18,7 @@ function formatDateWithTimeZone(ms: number, format: string) {
   const t = moment.tz.guess();
   const timeZone = moment.tz(t).zoneAbbr();
 
-  return `${date.format(format)} ${timeZone}`;
+  return `${date.format(format)} (UTC${timeZone})`;
 }
 
 // Formats the date in the local timezone YYYY-MM-DD followed by the time zone abbreviation

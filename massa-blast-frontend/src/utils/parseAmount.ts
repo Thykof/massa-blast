@@ -7,7 +7,7 @@ export interface FormattedAmount {
 
 export function formatAmount(
   amount: string,
-  decimals = 18,
+  decimals = 9,
   separator = ',',
 ): FormattedAmount {
   const decimal = '.';
