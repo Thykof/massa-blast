@@ -4,9 +4,9 @@ export function FAQ() {
       <div className="mb-4">
         <strong>How does it work?</strong>
         <p>
-          When you deposit, the system will record your session information,
-          including the amount and start time, then transfer the deposited sum
-          to a staking node. Next, you will be able to request a
+          When you deposit, the smart contract will record your session
+          information, including the amount and start time, then transfer the
+          deposited sum to a staking node. Next, you will be able to request a
           withdrawal—please wait a little to accrue some rewards. This action
           will log your withdrawal request, and a service monitoring the smart
           contract will calculate the rewards, deduct fees, and transfer the
