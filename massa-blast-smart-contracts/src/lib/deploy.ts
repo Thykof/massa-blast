@@ -42,7 +42,7 @@ export async function deployBlaster() {
   const costOwner = 4 + 5 + owner.length;
   const costBlastingAddress = 4 + 16 + blastingAddress.length;
   const costBlastingAmount = 4 + 19 + 8;
-  const costPause = 4 + 6 + 1;
+  const costPause = 4 + 14 + 1;
   const costWithdrawList = 4 + 19 + 4;
   const storageCost =
     costOwner +

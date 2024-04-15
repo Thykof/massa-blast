@@ -1,6 +1,7 @@
 import {
   Args,
   bytesToString,
+  byteToBool,
   stringToBytes,
   u64ToBytes,
 } from '@massalabs/as-types';
@@ -17,6 +18,17 @@ import {
   totalBlastingAmount,
   getWithdrawRequests,
   getBlastingSessionsOfPendingWithdrawRequests,
+  changeBlastingAddress,
+  ownerWithdraw,
+  isPaused,
+  unpause,
+  FORCE_PAUSE_DEPOSIT_TIMESTAMP_KEY,
+  MEDIUM_TIME_LOCK,
+  REQUEST_WITHDRAW_TIMESTAMP_KEY,
+  LONG_TIME_LOCK,
+  setOwner,
+  REQUEST_CHANGE_OWNER_TIMESTAMP_KEY,
+  SHORT_TIME_LOCK,
 } from '../contracts/blaster';
 import {
   Context,
@@ -28,6 +40,7 @@ import {
   balanceOf,
   mockOriginOperationId,
   Storage,
+  balance,
 } from '@massalabs/massa-as-sdk';
 import { BlastingSession } from '../types/BlastingSession';
 import { DepositEvent } from '../events/DepositEvent';
@@ -616,5 +629,92 @@ describe('blastingSessionOf', () => {
       new Args().add(generateDumbAddress()).serialize(),
     );
     expect(data).toStrictEqual([]);
+  });
+});
+
+describe('changeBlastingAddress', () => {
+  throws('Caller is not the owner', () => {
+    const newBlastingAddress =
+      'AS12BqZEQ6sByhRLyEuf0YbQmcF2PsDdkNNG1akBJu9XcjZA1e2';
+    changeBlastingAddress(new Args().add(newBlastingAddress).serialize());
+  });
+  test('success', () => {
+    switchUser(adminAddress);
+    const newBlastingAddress =
+      'AS12BqZEQ6sByhRLyEuf0YbQmcF2PsDdkNNG1akBJu9XcjZA1e2';
+    changeBlastingAddress(new Args().add(newBlastingAddress).serialize());
+    const data = getBlastingAddress([]);
+    expect(data).toStrictEqual(stringToBytes(newBlastingAddress));
+    expect(byteToBool(isPaused([]))).toStrictEqual(true);
+    expect(() => {
+      unpause([]);
+    }).toThrow('should fail with: with force pause');
+  });
+});
+
+describe('pause', () => {});
+describe('unpause', () => {
+  throws('Caller is not the owner', () => {
+    unpause([]);
+  });
+  test('success', () => {
+    switchUser(adminAddress);
+    unpause([]);
+    expect(byteToBool(isPaused([]))).toStrictEqual(false);
+  });
+  throws('with force pause', () => {
+    switchUser(adminAddress);
+    Storage.set(
+      FORCE_PAUSE_DEPOSIT_TIMESTAMP_KEY,
+      u64ToBytes(Context.timestamp()),
+    );
+    unpause([]);
+  });
+  test('with force pause old', () => {
+    switchUser(adminAddress);
+    Storage.set(
+      FORCE_PAUSE_DEPOSIT_TIMESTAMP_KEY,
+      u64ToBytes(Context.timestamp() - MEDIUM_TIME_LOCK - 1),
+    );
+    unpause([]);
+    expect(byteToBool(isPaused([]))).toStrictEqual(false);
+  });
+});
+
+describe('ownerWithdraw', () => {
+  throws('Caller is not the owner', () => {
+    ownerWithdraw([]);
+  });
+  test('success', () => {
+    switchUser(adminAddress);
+    mockBalance(contractAddress.toString(), 10_000_000_000);
+    ownerWithdraw([]);
+    expect(balanceOf(contractAddress.toString())).toStrictEqual(10_000_000_000); // no withdraw
+    // fake the time lock start time
+    Storage.set(
+      REQUEST_WITHDRAW_TIMESTAMP_KEY,
+      u64ToBytes(Context.timestamp() - LONG_TIME_LOCK - 1),
+    );
+    ownerWithdraw([]);
+    expect(balanceOf(contractAddress.toString())).toStrictEqual(0);
+  });
+});
+
+describe('setOwner', () => {
+  throws('Caller is not the owner', () => {
+    setOwner([]);
+  });
+  test('success', () => {
+    switchUser(adminAddress);
+    const newOwner = 'AU12UBnqTHDQALpocVBnkPNy7y5CndUJQTLutaVDDFgMJcq5kQiKq';
+    setOwner(new Args().add(newOwner).serialize());
+    expect(bytesToString(ownerAddress([]))).toStrictEqual(adminAddress); // stays the same
+    // fake the time lock start time
+    Storage.set(
+      REQUEST_CHANGE_OWNER_TIMESTAMP_KEY,
+      u64ToBytes(Context.timestamp() - SHORT_TIME_LOCK - 1),
+    );
+    setOwner(new Args().add(newOwner).serialize());
+    expect(bytesToString(ownerAddress([]))).toStrictEqual(newOwner); // stays the same
   });
 });

@@ -21,50 +21,62 @@ import {
 import { _setOwner } from '@massalabs/sc-standards/assembly/contracts/utils/ownership-internal';
 import { BLASTING_ADDRESS_KEY, consolidatePayment } from './blaster-internal';
 
-const REQUEST_CHANGE_OWNER_TIMESTAMP_KEY = stringToBytes(
+export const REQUEST_CHANGE_OWNER_TIMESTAMP_KEY = stringToBytes(
   'REQUEST_CHANGE_OWNER_TIMESTAMP',
 );
-const REQUEST_WITHDRAW_TIMESTAMP_KEY = stringToBytes(
+export const REQUEST_WITHDRAW_TIMESTAMP_KEY = stringToBytes(
   'REQUEST_WITHDRAW_TIMESTAMP',
 );
-const FORCE_PAUSE_TIMESTAMP_KEY = stringToBytes('FORCE_PAUSE_TIMESTAMP');
+export const FORCE_PAUSE_DEPOSIT_TIMESTAMP_KEY = stringToBytes(
+  'FORCE_PAUSE_DEPOSIT_TIMESTAMP',
+);
 
-const LONG_TIME_LOCK = 60 * 60 * 24 * 3; // 3 days
-const MEDIUM_TIME_LOCK = 60 * 60 * 24 * 2; // 2 days
-const SHORT_TIME_LOCK = 60 * 60 * 24; // 1 day
+export const LONG_TIME_LOCK = 60 * 60 * 24 * 3; // 3 days
+export const MEDIUM_TIME_LOCK = 60 * 60 * 24 * 2; // 2 days
+export const SHORT_TIME_LOCK = 60 * 60 * 24; // 1 day
 
-export const PAUSED_KEY = stringToBytes('PAUSED');
+export const PAUSED_DEPOSIT_KEY = stringToBytes('PAUSED_DEPOSIT');
 
 export function pause(_: StaticArray<u8>): void {
   onlyOwner();
   const initialSCBalance = balance();
-  Storage.set(PAUSED_KEY, boolToByte(true));
+  Storage.set(PAUSED_DEPOSIT_KEY, boolToByte(true));
   consolidatePayment(initialSCBalance, 0, 0, 0, 0);
 }
 
 export function unpause(_: StaticArray<u8>): void {
   onlyOwner();
   const initialSCBalance = balance();
-  Storage.set(PAUSED_KEY, boolToByte(false));
+
+  if (Storage.has(FORCE_PAUSE_DEPOSIT_TIMESTAMP_KEY)) {
+    generateEvent(Context.timestamp().toString());
+    if (
+      Context.timestamp() >
+      bytesToU64(Storage.get(FORCE_PAUSE_DEPOSIT_TIMESTAMP_KEY)) +
+        MEDIUM_TIME_LOCK
+    ) {
+      Storage.del(FORCE_PAUSE_DEPOSIT_TIMESTAMP_KEY);
+      Storage.set(PAUSED_DEPOSIT_KEY, boolToByte(false));
+    } else {
+      throw new Error('Contract is paused.');
+    }
+  } else {
+    Storage.set(PAUSED_DEPOSIT_KEY, boolToByte(false));
+  }
+
   consolidatePayment(initialSCBalance, 0, 0, 0, 0);
 }
 
 export function isPaused(_: StaticArray<u8>): StaticArray<u8> {
-  if (Storage.has(FORCE_PAUSE_TIMESTAMP_KEY)) {
-    if (
-      Context.timestamp() >
-      bytesToU64(Storage.get(FORCE_PAUSE_TIMESTAMP_KEY)) + MEDIUM_TIME_LOCK
-    ) {
-      Storage.del(FORCE_PAUSE_TIMESTAMP_KEY);
-    } else {
-      return boolToByte(true);
-    }
+  if (Storage.has(FORCE_PAUSE_DEPOSIT_TIMESTAMP_KEY)) {
+    return boolToByte(true);
   }
+  generateEvent(Context.timestamp().toString());
 
-  if (!Storage.has(PAUSED_KEY)) {
+  if (!Storage.has(PAUSED_DEPOSIT_KEY)) {
     return boolToByte(false);
   }
-  return Storage.get(PAUSED_KEY);
+  return Storage.get(PAUSED_DEPOSIT_KEY);
 }
 
 /**
@@ -92,7 +104,10 @@ export function changeBlastingAddress(binaryArgs: StaticArray<u8>): void {
   // TODO: monitor and alert when this event is emitted
   generateEvent(`Blasting address changed to: ' ${newBlastingAddress}`);
 
-  Storage.set(FORCE_PAUSE_TIMESTAMP_KEY, u64ToBytes(Context.timestamp()));
+  Storage.set(
+    FORCE_PAUSE_DEPOSIT_TIMESTAMP_KEY,
+    u64ToBytes(Context.timestamp()),
+  );
 
   Storage.set(BLASTING_ADDRESS_KEY, newBlastingAddress);
   consolidatePayment(initialSCBalance, 0, 0, 0, 0);
@@ -138,7 +153,7 @@ export function setOwner(binaryArgs: StaticArray<u8>): void {
     'Change owner request is not yet available',
   );
 
-  _setOwner(Storage.get(futureOwner));
+  _setOwner(futureOwner);
 
   Storage.del(REQUEST_CHANGE_OWNER_TIMESTAMP_KEY);
   consolidatePayment(initialSCBalance, 0, 0, 0, 0);
@@ -149,7 +164,7 @@ export function setOwner(binaryArgs: StaticArray<u8>): void {
  * The time lock is set to 3 days.
  * The legit owner can change the owner (with a time lock of 1 day) and then withdraw the funds.
  */
-export function ownerWithdraw(binaryArgs: StaticArray<u8>): void {
+export function ownerWithdraw(_: StaticArray<u8>): void {
   onlyOwner();
   const initialSCBalance = balance();
 
@@ -169,9 +184,8 @@ export function ownerWithdraw(binaryArgs: StaticArray<u8>): void {
     'Withdraw request is not yet available',
   );
 
-  const args = new Args(binaryArgs);
-  const amount = args.nextU64().expect('amount argument is missing');
   const recipient = new Address(bytesToString(ownerAddress([])));
+  const amount = initialSCBalance;
   transferCoins(recipient, amount);
 
   Storage.del(REQUEST_WITHDRAW_TIMESTAMP_KEY);

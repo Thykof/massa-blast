@@ -41,7 +41,7 @@ import {
   withdrawableKeyOf,
   withdrawRequestListKey,
 } from '../blaster-internal';
-import { isPaused, PAUSED_KEY } from '../blaster-admin';
+import { isPaused, PAUSED_DEPOSIT_KEY } from '../blaster-admin';
 import { blastingSessionOf } from '../blaster-read';
 import { costOfKeyWithdrawable, costOfRequestWithdraw } from '../storage-cost';
 import { WithdrawnEvent } from '../events/WithdrawnEvent';
@@ -75,7 +75,7 @@ export function constructor(binaryArgs: StaticArray<u8>): StaticArray<u8> {
     .expect('blastingAddress argument is missing or invalid');
 
   Storage.set(BLASTING_ADDRESS_KEY, blastingAddress);
-  Storage.set(PAUSED_KEY, boolToByte(false));
+  Storage.set(PAUSED_DEPOSIT_KEY, boolToByte(false));
 
   generateEvent('BlastingAddress set to ' + blastingAddress);
   return [];
@@ -113,7 +113,6 @@ export function deposit(binaryArgs: StaticArray<u8>): StaticArray<u8> {
 
 export function requestWithdraw(_: StaticArray<u8>): StaticArray<u8> {
   const initialSCBalance = balance();
-  assert(!byteToBool(isPaused([])), 'Contract is paused.');
   const caller = Context.caller().toString();
 
   let withdrawRequestOpId = getOriginOperationId();
@@ -145,7 +144,6 @@ export function setWithdrawableFor(
   binaryArgs: StaticArray<u8>,
 ): StaticArray<u8> {
   onlyOwner();
-  assert(!byteToBool(isPaused([])), 'Contract is paused.');
 
   const initialSCBalance = balance();
 
