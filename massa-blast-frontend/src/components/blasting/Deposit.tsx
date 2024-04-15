@@ -28,12 +28,16 @@ export function Deposit(props: { refetch: () => void }) {
     setError('');
     const newAmount = value.replace(/[^0-9.-]/g, ''); // Remove non-numeric characters
 
-    if (!newAmount) {
+    setAmount(newAmount);
+  }
+
+  function handleSubmit() {
+    if (!amount) {
       setError('Invalid amount');
       return;
     }
 
-    const newAmountInNonaMas = fromMAS(newAmount);
+    const newAmountInNonaMas = fromMAS(amount);
 
     if (newAmountInNonaMas < MINIMAL_DEPOSIT) {
       setError(`Amount to low (min: ${toMAS(MINIMAL_DEPOSIT)} MAS)`);
@@ -45,10 +49,6 @@ export function Deposit(props: { refetch: () => void }) {
       return;
     }
 
-    setAmount(newAmount);
-  }
-
-  function handleSubmit() {
     deposit(fromMAS(amount));
   }
 

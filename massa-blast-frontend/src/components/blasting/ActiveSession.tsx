@@ -1,24 +1,21 @@
 import { useAccountStore } from '../../store';
-import {
-  useReadBlastingSession,
-  useReadWithdrawable,
-} from '../../utils/read-sc';
+import { useReadWithdrawable } from '../../utils/read-sc';
 import { useWrite } from '../../utils/write-sc';
 import { Card } from '../Card';
 import { formatAmount } from '../../utils/parseAmount';
 import { msToDateTimeWithTimeZone } from '../../utils';
 import { useEffect } from 'react';
 import { Button, Spinner } from '@massalabs/react-ui-kit';
+import { BlastingSession } from '../../types/BlastingSession';
 
-export function ActiveSession(props: { refetch: () => void }) {
-  const { refetch } = props;
+export function ActiveSession(props: {
+  session: BlastingSession;
+  refetch: () => void;
+}) {
+  const { session, refetch } = props;
   const { connectedAccount, massaClient } = useAccountStore();
 
-  const { session } = useReadBlastingSession(
-    massaClient,
-    connectedAccount?.address(),
-  );
-  const { withdrawable } = useReadWithdrawable(
+  const { withdrawable, refetch: refetchWithdrawable } = useReadWithdrawable(
     massaClient,
     connectedAccount?.address(),
   );
@@ -28,6 +25,7 @@ export function ActiveSession(props: { refetch: () => void }) {
   useEffect(() => {
     if (isSuccess) {
       refetch();
+      refetchWithdrawable();
     }
   }, [isSuccess, refetch]);
 

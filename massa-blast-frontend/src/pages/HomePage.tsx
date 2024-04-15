@@ -4,6 +4,7 @@ import { Card } from '../components/Card';
 import { useReadBlastingSession, useTotalAmount } from '../utils/read-sc';
 import { Deposit } from '../components/blasting/Deposit';
 import { ActiveSession } from '../components/blasting/ActiveSession';
+import { FAQ } from '../components/blasting/FAQ';
 
 export default function HomePage() {
   const { connectedAccount, currentProvider, massaClient } = useAccountStore();
@@ -35,7 +36,7 @@ export default function HomePage() {
 
     return (
       <Card>
-        <ActiveSession refetch={refetch} />
+        <ActiveSession session={session} refetch={refetch} />
       </Card>
     );
   };
@@ -55,6 +56,11 @@ export default function HomePage() {
           </Card>
         </section>
         <section className="mb-10">{mainSection()}</section>
+        <section className="mb-10">
+          <Card>
+            <FAQ />
+          </Card>
+        </section>
       </div>
     </div>
   );
