@@ -1,18 +1,29 @@
-import { Injectable } from '@nestjs/common';
-import { Interval } from '@nestjs/schedule';
+import { Injectable, Logger } from '@nestjs/common';
+import { Cron, CronExpression, SchedulerRegistry } from '@nestjs/schedule';
 import { BlasterService } from './blaster.service';
+
+const CRON_NAME = 'cron_blaster';
 
 @Injectable()
 export class BlasterSchedulerService {
-  constructor(private blasterService: BlasterService) {}
+  private readonly logger = new Logger('BLASTER');
 
-  public async onModuleInit(): Promise<void> {
-    await this.blasterService.blast();
-  }
+  constructor(
+    private blasterService: BlasterService,
+    private schedulerRegistry: SchedulerRegistry,
+  ) {}
 
-  @Interval(3 * 60 * 1000) // every 3 minutes to wait for finality of the previous operations
-  // @Interval(10000) // DEBUG
+  @Cron(CronExpression.EVERY_MINUTE, {
+    name: CRON_NAME,
+  })
   async blasting() {
-    this.blasterService.blast();
+    const job = this.schedulerRegistry.getCronJob(CRON_NAME);
+    job.stop();
+    try {
+      await this.blasterService.blast();
+    } catch (error) {
+      this.logger.error(error);
+    }
+    job.start();
   }
 }

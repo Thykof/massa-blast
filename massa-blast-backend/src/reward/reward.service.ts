@@ -37,6 +37,8 @@ export class RewardService {
 
     const fees = this.calculateFees(totalRewards);
 
+    this.logger.log('Fees: ' + fees.toFixed(0));
+
     return BigInt(totalRewards.minus(fees).toFixed(0));
   }
 

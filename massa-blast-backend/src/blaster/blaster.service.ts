@@ -57,14 +57,22 @@ export class BlasterService {
     let remainingToDistribute = pendingWithdrawAmount;
 
     for (const session of sortedSessions) {
-      if (remainingBalance < session.amount) {
+      const rewards = await this.rewardService.getRewards(
+        session.amount,
+        new Date(Number(session.startTimestamp)),
+        new Date(Number(session.endTimestamp)),
+      );
+
+      const amountToDistribute = session.amount + rewards;
+
+      if (remainingBalance < amountToDistribute) {
         this.logger.log('Not enough balance to distribute');
         break;
       }
 
-      await this.setWithdrawableFor(session);
-      remainingBalance -= session.amount;
-      remainingToDistribute -= session.amount;
+      await this.setWithdrawableFor(session, amountToDistribute);
+      remainingBalance -= amountToDistribute;
+      remainingToDistribute -= amountToDistribute;
     }
 
     this.logger.log('Distribute done');
@@ -77,15 +85,10 @@ export class BlasterService {
     };
   }
 
-  public async setWithdrawableFor(session: BlastingSession) {
-    const rewards = await this.rewardService.getRewards(
-      session.amount,
-      new Date(Number(session.startTimestamp)),
-      new Date(Number(session.endTimestamp)),
-    );
-
-    const amountToDistribute = session.amount + rewards;
-
+  public async setWithdrawableFor(
+    session: BlastingSession,
+    amountToDistribute: bigint,
+  ) {
     this.logger.log(
       `Setting withdrawable ${amountToDistribute} for ${session.userAddress}`,
     );
