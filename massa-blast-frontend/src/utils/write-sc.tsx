@@ -93,7 +93,7 @@ export function useWrite(massaClient?: Client) {
             EOperationStatus.SPECULATIVE_ERROR,
             EOperationStatus.FINAL_ERROR,
             EOperationStatus.FINAL_SUCCESS,
-          ]);
+          ], 180_000);
       })
       .then((status: EOperationStatus) => {
         if (status !== EOperationStatus.FINAL_SUCCESS) {

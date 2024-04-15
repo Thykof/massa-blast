@@ -18,7 +18,7 @@ dotenv.config();
 const publicApi = process.env.JSON_RPC_URL_PUBLIC!;
 const secretKey = process.env.SECRET_KEY_FULLPOWER!;
 // Define deployment parameters
-const chainId = CHAIN_ID.Sandbox; // Choose the chain ID corresponding to the network you want to deploy to
+const chainId = CHAIN_ID.MainNet; // Choose the chain ID corresponding to the network you want to deploy to
 const maxGas = MAX_GAS_DEPLOYMENT; // Gas for deployment Default is the maximum gas allowed for deployment
 const fees = BigInt(process.env.FEES!); // Fees to be paid for deployment
 const waitFirstEvent = true;

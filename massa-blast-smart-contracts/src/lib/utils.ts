@@ -56,7 +56,7 @@ export async function waitOp(
         EOperationStatus.SPECULATIVE_ERROR,
         EOperationStatus.SPECULATIVE_SUCCESS,
       ],
-      90_000,
+      180_000,
     );
 
   const events = await client.smartContracts().getFilteredScOutputEvents({
@@ -75,7 +75,7 @@ export async function waitOp(
     .awaitMultipleRequiredOperationStatus(
       operationId,
       [EOperationStatus.FINAL_ERROR, EOperationStatus.FINAL_SUCCESS],
-      90_000,
+      180_000,
     );
 
   return {

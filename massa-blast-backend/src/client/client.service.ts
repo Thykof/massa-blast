@@ -165,7 +165,7 @@ export class ClientService {
             EOperationStatus.FINAL_ERROR,
             EOperationStatus.FINAL_SUCCESS,
           ],
-          90_000,
+          180_000,
         );
     } catch (error) {
       this.logger.error(`Operation ${operationId} error ${error}`);
