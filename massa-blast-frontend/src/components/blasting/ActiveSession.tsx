@@ -1,7 +1,6 @@
 import { useAccountStore } from '../../store';
 import { useReadWithdrawable } from '../../utils/read-sc';
 import { useWrite } from '../../utils/write-sc';
-import { Card } from '../Card';
 import { formatAmount } from '../../utils/parseAmount';
 import { msToDateTimeWithTimeZone } from '../../utils';
 import { useEffect } from 'react';
@@ -27,7 +26,7 @@ export function ActiveSession(props: {
       refetch();
       refetchWithdrawable();
     }
-  }, [isSuccess, refetch]);
+  }, [isSuccess, refetch, refetchWithdrawable]);
 
   const subSection = () => {
     if (session?.withdrawRequestOpId === '') {
