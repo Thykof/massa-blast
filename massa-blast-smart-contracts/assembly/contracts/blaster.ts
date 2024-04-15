@@ -113,6 +113,7 @@ export function deposit(binaryArgs: StaticArray<u8>): StaticArray<u8> {
 
 export function requestWithdraw(_: StaticArray<u8>): StaticArray<u8> {
   const initialSCBalance = balance();
+  assert(!byteToBool(isPaused([])), 'Contract is paused.');
   const caller = Context.caller().toString();
 
   let withdrawRequestOpId = getOriginOperationId();
@@ -144,6 +145,7 @@ export function setWithdrawableFor(
   binaryArgs: StaticArray<u8>,
 ): StaticArray<u8> {
   onlyOwner();
+  assert(!byteToBool(isPaused([])), 'Contract is paused.');
 
   const initialSCBalance = balance();
 

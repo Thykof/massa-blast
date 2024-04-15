@@ -1,6 +1,4 @@
-import { ISCData } from '@massalabs/massa-sc-deployer';
 import {
-  Args,
   Client,
   EOperationStatus,
   fromMAS,
@@ -8,8 +6,6 @@ import {
   IBaseAccount,
   ProviderType,
   PublicApiClient,
-  u64ToBytes,
-  u8toByte,
   WalletClient,
   Web3Account,
 } from '@massalabs/massa-web3';
@@ -54,10 +50,14 @@ export async function waitOp(
 ) {
   const status = await client
     .smartContracts()
-    .awaitMultipleRequiredOperationStatus(operationId, [
-      EOperationStatus.SPECULATIVE_ERROR,
-      EOperationStatus.SPECULATIVE_SUCCESS,
-    ]);
+    .awaitMultipleRequiredOperationStatus(
+      operationId,
+      [
+        EOperationStatus.SPECULATIVE_ERROR,
+        EOperationStatus.SPECULATIVE_SUCCESS,
+      ],
+      90_000,
+    );
 
   const events = await client.smartContracts().getFilteredScOutputEvents({
     start: null,
@@ -72,10 +72,11 @@ export async function waitOp(
 
   await client
     .smartContracts()
-    .awaitMultipleRequiredOperationStatus(operationId, [
-      EOperationStatus.FINAL_ERROR,
-      EOperationStatus.FINAL_SUCCESS,
-    ]);
+    .awaitMultipleRequiredOperationStatus(
+      operationId,
+      [EOperationStatus.FINAL_ERROR, EOperationStatus.FINAL_SUCCESS],
+      90_000,
+    );
 
   return {
     status,
