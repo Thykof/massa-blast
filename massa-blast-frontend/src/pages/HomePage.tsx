@@ -45,8 +45,8 @@ export default function HomePage() {
     <div className="sm:w-full md:max-w-4xl mx-auto">
       <div className="flex justify-between mb-2"></div>
       <div className="p-5">
-        <section className="mb-4 p-2">
-          <p className="mas-title mb-2 text-center">Massa Blast</p>
+        <section className="mb-4 p-2 text-center">
+          <p className="mas-title mb-2 ">Massa Blast</p>
           <h4 className="mas-body">Stack your MAS without running a node!</h4>
           {totalAmount && <p>{totalAmount} MAS is already blasting!</p>}
         </section>
@@ -58,6 +58,7 @@ export default function HomePage() {
         <section className="mb-10">{mainSection()}</section>
         <section className="mb-10">
           <Card>
+            <h1 className="mas-subtitle text-center">FAQ</h1>
             <FAQ />
           </Card>
         </section>

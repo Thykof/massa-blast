@@ -23,28 +23,6 @@ export function FAQ() {
         </p>
       </div>
       <div className="mb-4">
-        <strong>Why should I trust you?</strong>
-        <p>
-          You can deposit a minimal amount of 10 MAS and withdraw it, observing
-          that you get your MAS back. Since it's a short period of time and a
-          low amount, you might not see any rewards.
-        </p>
-      </div>
-      <div className="mb-4">
-        <strong>How do you respect the charter?</strong>
-        <p>
-          The community charter limits the amount any entity can stake on users'
-          behalf to 1,000,000 MAS, as outlined here:{' '}
-          <a href="https://github.com/massalabs/massa/blob/main/COMMUNITY_CHARTER.md">
-            https://github.com/massalabs/massa/blob/main/COMMUNITY_CHARTER.md
-          </a>
-          . This limit is enforced within the smart contract, and you can verify
-          this by attempting to deposit 1,000,000 MAS—if you have that much.
-          You'll find that the operation is rejected, as a dry run of the
-          transaction will fail.
-        </p>
-      </div>
-      <div className="mb-4">
         <strong>How do you calculate the rewards?</strong>
         <p>
           Every three cycles, a server gathers the amount of staked rolls. The
@@ -80,6 +58,30 @@ export function FAQ() {
         </p>
       </div>
       <div className="mb-4">
+        <strong>What is the contract address?</strong>
+        <p>
+          The contract address is{' '}
+          <a href="https://explorer.massa.net/mainnet/address/AS1mPyb6HCqATWDRQKi4gPSfbphdaGv1pwEscLuKVaQgcktmVTqY/">
+            AS1mPyb6HCqATWDRQKi4gPSfbphdaGv1pwEscLuKVaQgcktmVTqY
+          </a>
+          .
+        </p>
+      </div>
+      <div className="mb-4">
+        <strong>How do you respect the charter?</strong>
+        <p>
+          The community charter limits the amount any entity can stake on users'
+          behalf to 1,000,000 MAS, as outlined here:{' '}
+          <a href="https://github.com/massalabs/massa/blob/main/COMMUNITY_CHARTER.md">
+            https://github.com/massalabs/massa/blob/main/COMMUNITY_CHARTER.md
+          </a>
+          . This limit is enforced within the smart contract, and you can verify
+          this by attempting to deposit 1,000,000 MAS—if you have that much.
+          You'll find that the operation is rejected, as a dry run of the
+          transaction will fail.
+        </p>
+      </div>
+      <div className="mb-4">
         <strong>How did you create the website?</strong>
         <p>
           I was inspired by the official DApp created by the MassaLabs team at{' '}
@@ -95,6 +97,25 @@ export function FAQ() {
           , which features an array of excellent components and a Tailwind
           preset example. The source code of Massa Station uses this kit, making
           it an exceptional resource for any community developer!
+        </p>
+      </div>
+      <div className="mb-4">
+        <strong>Who are you?</strong>
+        <p>
+          I'm a team member of MassaLabs, I contributed to{' '}
+          <a href="https://station.massa.net">Massa Station</a>, Massa Wallet
+          and the <a href="https://station.massa.net">Bridge</a>. You can visit
+          my GitHub account at{' '}
+          <a href="https://github.com/thykof">https://github.com/thykof</a> to
+          check that ;).
+        </p>
+      </div>
+      <div className="mb-4">
+        <strong>Why should I trust you?</strong>
+        <p>
+          You can deposit a minimal amount of 10 MAS and withdraw it, observing
+          that you get your MAS back. Since it's a short period of time and a
+          low amount, you might not see any rewards.
         </p>
       </div>
     </div>

@@ -73,8 +73,8 @@ export function ActiveSession(props: {
   }
 
   return (
-    <Card customClass="pb-0 mb-4">
-      <div className="flex justify-between items-center mb-2"></div>
+    <>
+      <div className="flex justify-between items-center"></div>
       <div className="mb-4">
         <p className="mas-body">
           Total amount:{' '}
@@ -90,7 +90,7 @@ export function ActiveSession(props: {
           </p>
         )}
       </div>
-      <section className="mb-10">{subSection()}</section>
-    </Card>
+      <section className="mb-4">{subSection()}</section>
+    </>
   );
 }
