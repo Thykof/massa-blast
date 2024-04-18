@@ -25,19 +25,19 @@ export function FAQ() {
       <div className="mb-4">
         <strong>How do you calculate the rewards?</strong>
         <p>
-          Every three cycles, a server gathers the amount of staked rolls. The
-          system then takes the start and end dates of your session, along with
-          your deposited amount, and reviews the staking roll records over time.
-          Any rewards exceeding 100 MAS will be automatically compounded.
+          Every cycle, a server gathers the amount of staked rolls. The system
+          then takes the start and end dates of your session, along with your
+          deposited amount, and reviews the staking roll records over time. Any
+          rewards exceeding 100 MAS will be automatically compounded.
         </p>
       </div>
       <div className="mb-4">
         <strong>How do you calculate the fees?</strong>
         <p>
           When computing rewards, the system accounts for an activation period
-          of three cycles (for more information, visit{' '}
+          of three cycles (more information{' '}
           <a href="https://docs.massa.net/docs/node/stake#telling-your-node-to-start-staking-with-your-rolls">
-            https://docs.massa.net/docs/node/stake#telling-your-node-to-start-staking-with-your-rolls
+            here
           </a>
           ) plus an additional three cycles for service fees. During this time,
           your MAS are not accruing rewards for you. Afterwards, the system
@@ -46,13 +46,32 @@ export function FAQ() {
       </div>
       <div className="mb-4">
         <strong>
+          Why is it taking so long to have the withdraw available?
+        </strong>
+        <p>
+          After requesting a withdrawal, if the amount deposited exceeds 100 MAS
+          (roll cost), the service may need to sell some rolls to cover the
+          withdrawal. A cycle of 35 minutes is required to sell the rolls and
+          make the withdrawal available. Learn more in the
+          <a href="https://docs.massa.net/docs/node/stake#selling-rolls">
+            documentation
+          </a>
+          .
+        </p>
+      </div>
+      <div className="mb-4">
+        <strong>
           Can I see the potential rewards before requesting a withdrawal?
         </strong>
         <p>
           This feature is in development, but you can obtain a preliminary
-          estimation using the community tool at{' '}
+          estimation using the community tools at{' '}
           <a href="https://n0futur3.com/massa/calculator">
             https://n0futur3.com/massa/calculator
+          </a>{' '}
+          and{' '}
+          <a href="https://massacalc.info/?tab=apy">
+            https://massacalc.info/?tab=apy
           </a>
           .
         </p>
@@ -63,6 +82,16 @@ export function FAQ() {
           The contract address is{' '}
           <a href="https://explorer.massa.net/mainnet/address/AS1mPyb6HCqATWDRQKi4gPSfbphdaGv1pwEscLuKVaQgcktmVTqY/">
             AS1mPyb6HCqATWDRQKi4gPSfbphdaGv1pwEscLuKVaQgcktmVTqY
+          </a>
+          .
+        </p>
+      </div>
+      <div className="mb-4">
+        <strong>What is the stacking node address?</strong>
+        <p>
+          The stacking node address is{' '}
+          <a href="https://explorer.massa.net/mainnet/address/AU12MQoZRrJhszgMKLQR7YFBXSALm42Gxcq98FwNU3KiC5aPrftyc/">
+            AU12MQoZRrJhszgMKLQR7YFBXSALm42Gxcq98FwNU3KiC5aPrftyc
           </a>
           .
         </p>
@@ -111,11 +140,21 @@ export function FAQ() {
         </p>
       </div>
       <div className="mb-4">
-        <strong>Why should I trust you?</strong>
+        <strong>Disclaimer</strong>
         <p>
-          You can deposit a minimal amount of 10 MAS and withdraw it, observing
-          that you get your MAS back. Since it's a short period of time and a
-          low amount, you might not see any rewards.
+          Massa Blast is provided strictly on an "as is" and "as available"
+          basis without warranties of any kind, either express or implied,
+          including but not limited to, implied warranties of merchantability or
+          fitness for a particular purpose. The Service does not assure any
+          specific results, rewards, or benefits from the stacking process.
+          Users acknowledge and accept that participating in stacking presents
+          inherent risks, including possible loss of staking assets. Your
+          capital is at risk; only invest funds you can afford to lose. No
+          assurance or guarantee is provided and there are risks including smart
+          contract vulnerabilities and operational errors. Utilization of this
+          Service is at the user’s own risk and discretion, and it is the user’s
+          responsibility to evaluate all risks and to adhere to all relevant
+          laws and regulations governing their activities.
         </p>
       </div>
     </div>
