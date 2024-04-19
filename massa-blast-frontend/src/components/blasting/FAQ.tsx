@@ -147,14 +147,14 @@ export function FAQ() {
           including but not limited to, implied warranties of merchantability or
           fitness for a particular purpose. The Service does not assure any
           specific results, rewards, or benefits from the stacking process.
-          Users acknowledge and accept that participating in stacking presents
-          inherent risks, including possible loss of staking assets. Your
-          capital is at risk; only invest funds you can afford to lose. No
-          assurance or guarantee is provided and there are risks including smart
-          contract vulnerabilities and operational errors. Utilization of this
-          Service is at the user’s own risk and discretion, and it is the user’s
-          responsibility to evaluate all risks and to adhere to all relevant
-          laws and regulations governing their activities.
+          Users acknowledge and accept that using Massa Blast inherent risks,
+          including but not limited to possible loss of staking assets, smart
+          contract vulnerabilities, operational errors. Your capital is at risk,
+          only invest funds you can afford to lose. No assurance or guarantee is
+          provided. Utilization of this Service is at the user’s own risk and
+          discretion, and it is the user’s responsibility to evaluate all risks
+          and to adhere to all relevant laws and regulations governing their
+          activities.
         </p>
       </div>
     </div>
