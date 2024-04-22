@@ -84,20 +84,6 @@ export async function waitOp(
   };
 }
 
-export const getContractAddressFromDeploy = (events: IEvent[]): string => {
-  const deployedSCEvent = events?.find((e) =>
-    e.data.includes('Contract deployed at address'),
-  );
-
-  if (!deployedSCEvent) {
-    throw new Error('failed to retrieve deploy address');
-  }
-
-  return deployedSCEvent.data.substring(
-    'Contract deployed at address: '.length,
-    deployedSCEvent.data.length,
-  );
-};
 
 export async function getBalance(
   address: string,
