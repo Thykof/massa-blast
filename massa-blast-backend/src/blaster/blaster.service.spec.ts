@@ -153,7 +153,7 @@ describe('BlasterService', () => {
       ]);
     getBalance = jest
       .spyOn(clientService, 'getBalance')
-      .mockResolvedValue(100_000_000_000n);
+      .mockResolvedValue(110_000_000_000n);
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(0n);
@@ -170,6 +170,7 @@ describe('BlasterService', () => {
         'O1',
         endTimestamp,
       ),
+      100000158630n,
     );
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).toHaveBeenCalledTimes(0);
@@ -190,7 +191,7 @@ describe('BlasterService', () => {
       ]);
     getBalance = jest
       .spyOn(clientService, 'getBalance')
-      .mockResolvedValue(200_000_000_000n);
+      .mockResolvedValue(210_000_000_000n);
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(0n);
@@ -207,6 +208,7 @@ describe('BlasterService', () => {
         'O1',
         endTimestamp,
       ),
+      100000158630n,
     );
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).toHaveBeenCalledTimes(0);
@@ -234,7 +236,7 @@ describe('BlasterService', () => {
       ]);
     getBalance = jest
       .spyOn(clientService, 'getBalance')
-      .mockResolvedValue(100_000_000_000n);
+      .mockResolvedValue(110_000_000_000n);
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(0n);
@@ -251,6 +253,7 @@ describe('BlasterService', () => {
         'O1',
         endTimestamp,
       ),
+      100000158630n,
     );
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).toHaveBeenCalledTimes(1);
@@ -278,7 +281,7 @@ describe('BlasterService', () => {
       ]);
     getBalance = jest
       .spyOn(clientService, 'getBalance')
-      .mockResolvedValue(400_000_000_000n);
+      .mockResolvedValue(430_000_000_000n);
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(0n);
@@ -295,6 +298,7 @@ describe('BlasterService', () => {
         'O1',
         endTimestamp,
       ),
+      100000158630n,
     );
     expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
       2,
@@ -305,6 +309,7 @@ describe('BlasterService', () => {
         'O2',
         endTimestamp,
       ),
+      200000317261n,
     );
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).toHaveBeenCalledTimes(0);
@@ -332,7 +337,7 @@ describe('BlasterService', () => {
       ]);
     getBalance = jest
       .spyOn(clientService, 'getBalance')
-      .mockResolvedValue(300_000_000_000n);
+      .mockResolvedValue(330_000_000_000n);
     getAllDeferredCredits = jest
       .spyOn(clientService, 'getAllDeferredCredits')
       .mockResolvedValue(0n);
@@ -349,6 +354,7 @@ describe('BlasterService', () => {
         'O2',
         endTimestamp + 1n,
       ),
+      200000317261n,
     );
     expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
       2,
@@ -359,6 +365,7 @@ describe('BlasterService', () => {
         'O1',
         endTimestamp,
       ),
+      100000158630n,
     );
 
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
@@ -404,16 +411,7 @@ describe('BlasterService', () => {
         'O1',
         endTimestamp,
       ),
-    );
-    expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
-      2,
-      new BlastingSession(
-        startTimestamp,
-        200_000_000_000n,
-        'AU2',
-        'O2',
-        endTimestamp,
-      ),
+      100000158630n,
     );
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).toHaveBeenCalledTimes(0);
@@ -449,18 +447,9 @@ describe('BlasterService', () => {
     await blasterService.blast();
     expect(getBalance).toHaveBeenCalled();
     expect(getAllDeferredCredits).toHaveBeenCalled();
-    expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
-      1,
-      new BlastingSession(
-        startTimestamp,
-        100_000_000_000n,
-        'AU1',
-        'O1',
-        endTimestamp,
-      ),
-    );
+    expect(blasterSetWithdrawableFor).not.toHaveBeenCalled();
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
-    expect(sellRolls).toHaveBeenNthCalledWith(1, 1n);
+    expect(sellRolls).toHaveBeenNthCalledWith(1, 2n);
     expect(buyRolls).not.toHaveBeenCalled();
   });
 
@@ -502,6 +491,7 @@ describe('BlasterService', () => {
         'O1',
         endTimestamp,
       ),
+      100000158630n,
     );
     expect(blasterSetWithdrawableFor).toHaveBeenNthCalledWith(
       2,
@@ -512,9 +502,10 @@ describe('BlasterService', () => {
         'O2',
         endTimestamp,
       ),
+      300000475891n,
     );
     expect(getBlastingSessionsOfPendingWithdrawRequests).toHaveBeenCalled();
     expect(sellRolls).not.toHaveBeenCalled();
-    expect(buyRolls).toHaveBeenNthCalledWith(1, 2n);
+    expect(buyRolls).toHaveBeenNthCalledWith(1, 1n);
   });
 });

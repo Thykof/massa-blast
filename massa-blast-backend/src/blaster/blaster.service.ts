@@ -33,10 +33,17 @@ export class BlasterService {
   private async distribute(
     sessions: BlastingSession[],
   ): Promise<DistributeResult> {
-    const pendingWithdrawAmount = sessions.reduce(
-      (acc, curr) => acc + curr.amount,
-      0n,
-    );
+    const pendingWithdrawAmount = await sessions.reduce(async (acc, curr) => {
+      return (
+        (await acc) +
+        curr.amount +
+        (await this.rewardService.getRewards(
+          curr.amount,
+          new Date(Number(curr.startTimestamp)),
+          new Date(Number(curr.endTimestamp)),
+        ))
+      );
+    }, Promise.resolve(0n));
     this.logger.log(`Pending withdraw amount: ${pendingWithdrawAmount}`);
 
     const balance = await this.clientService.getBalance(this.nodeAddress);
@@ -57,6 +64,7 @@ export class BlasterService {
     let remainingToDistribute = pendingWithdrawAmount;
 
     for (const session of sortedSessions) {
+      // TODO: refactor to not call getRewards twice
       const rewards = await this.rewardService.getRewards(
         session.amount,
         new Date(Number(session.startTimestamp)),
