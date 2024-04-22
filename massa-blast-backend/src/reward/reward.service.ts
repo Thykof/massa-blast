@@ -35,11 +35,17 @@ export class RewardService {
       toDate,
     );
 
+    this.logger.log('Total rewards: ' + totalRewards.toFixed(0));
+
     const fees = this.calculateFees(totalRewards);
 
     this.logger.log('Fees: ' + fees.toFixed(0));
 
-    return BigInt(totalRewards.minus(fees).toFixed(0));
+    const toDistribute = BigInt(totalRewards.minus(fees).toFixed(0));
+
+    this.logger.log('To distribute: ' + toDistribute);
+
+    return toDistribute;
   }
 
   async getRewardsWithoutFees(
