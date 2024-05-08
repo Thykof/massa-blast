@@ -58,31 +58,33 @@ export class RewardService {
       toDate,
     );
 
+    const initialUserAmount = userAmount;
+    let compoundTimes = new BigNumber(0);
+
     let totalRewards = new BigNumber(0);
 
     for (let i = 0; i <= totalRollsRecords.length - 2; i++) {
-      totalRewards = totalRewards.plus(
-        this.rewardsDuringPeriod(
-          totalRollsRecords[i].value,
-          totalRollsRecords[i + 1].value,
-          totalRollsRecords[i].createdAt,
-          totalRollsRecords[i + 1].createdAt,
-          userAmount,
-        ),
+      const rewards = this.rewardsDuringPeriod(
+        totalRollsRecords[i].value,
+        totalRollsRecords[i + 1].value,
+        totalRollsRecords[i].createdAt,
+        totalRollsRecords[i + 1].createdAt,
+        userAmount,
       );
 
-      userAmount = this.compound(userAmount, totalRewards);
+      // if the user amount is enough to compound, we compound
+      const newUserAmount = initialUserAmount.plus(totalRewards);
+      if (
+        newUserAmount.isGreaterThan(this.rollPrice.multipliedBy(compoundTimes))
+      ) {
+        userAmount = newUserAmount;
+        compoundTimes = compoundTimes.plus(1);
+      }
+
+      totalRewards = totalRewards.plus(rewards);
     }
 
     return totalRewards;
-  }
-  compound(userAmount: BigNumber, totalRewards: BigNumber): BigNumber {
-    const newAmount = userAmount.plus(totalRewards);
-    if (newAmount.isGreaterThan(this.rollPrice)) {
-      return newAmount;
-    }
-
-    return userAmount;
   }
 
   rewardsDuringPeriod(

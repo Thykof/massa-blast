@@ -80,7 +80,7 @@ describe('RewardService', () => {
         start,
         end,
       );
-      expect(result.toString()).toBe('315199166751129600');
+      expect(result.toString()).toBe('164740608000000');
     });
 
     it('real use case, one day', async () => {
@@ -149,7 +149,7 @@ describe('RewardService', () => {
         start,
         end,
       );
-      expect(result.toString()).toBe('4600877813828.83911852288');
+      expect(result.toString()).toBe('98003250529.4094336');
     });
   });
 });

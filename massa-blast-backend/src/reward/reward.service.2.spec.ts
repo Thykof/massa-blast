@@ -52,7 +52,7 @@ describe('RewardService', () => {
       ]);
 
       const result = await service.getRewards(10_000_000_000n, start, end);
-      expect(result.toString()).toBe('283679250076016640');
+      expect(result.toString()).toBe('148266547200000');
     });
   });
 });
