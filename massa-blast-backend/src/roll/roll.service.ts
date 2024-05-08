@@ -23,12 +23,7 @@ export class RollService {
 
   private readonly logger = new Logger('ROLL');
 
-  public onModuleInit() {
-    this.fetchTotalRolls();
-  }
-
   @Interval(16 * 128 * 1000) // every 1 cycle
-  // @Interval(3 * 1000) // DEBUG
   async fetchTotalRolls() {
     const stackers = await this.getStakers();
 
