@@ -104,10 +104,12 @@ export function FAQ() {
           <a href="https://github.com/massalabs/massa/blob/main/COMMUNITY_CHARTER.md">
             https://github.com/massalabs/massa/blob/main/COMMUNITY_CHARTER.md
           </a>
-          . This limit is enforced within the smart contract, and you can verify
-          this by attempting to deposit 1,000,000 MAS—if you have that much.
-          You'll find that the operation is rejected, as a dry run of the
-          transaction will fail.
+          . This limit is enforced within the smart contract: the deposit will
+          be rejected if it would increase the blasting amount above the limit.
+          If a user has already deposited 1,000,000 MAS, then no one will be
+          able to deposit any additional MAS. You can verify this by attempting
+          to deposit 1,000,001 MAS—if you have that much. You'll find that the
+          operation is rejected, as a dry run of the transaction will fail.
         </p>
       </div>
       <div className="mb-4">
