@@ -52,7 +52,7 @@ export function FAQ() {
           After requesting a withdrawal, if the amount deposited exceeds 100 MAS
           (roll cost), the service may need to sell some rolls to cover the
           withdrawal. A cycle of 35 minutes is required to sell the rolls and
-          make the withdrawal available. Learn more in the
+          make the withdrawal available. Learn more in the{' '}
           <a href="https://docs.massa.net/docs/node/stake#selling-rolls">
             documentation
           </a>
@@ -80,7 +80,7 @@ export function FAQ() {
         <strong>What is the contract address?</strong>
         <p>
           The contract address is{' '}
-          <a href="https://explorer.massa.net/mainnet/address/AS1mPyb6HCqATWDRQKi4gPSfbphdaGv1pwEscLuKVaQgcktmVTqY/">
+          <a href="https://explorer.massa.net/mainnet/address/AS1mPyb6HCqATWDRQKi4gPSfbphdaGv1pwEscLuKVaQgcktmVTqY">
             AS1mPyb6HCqATWDRQKi4gPSfbphdaGv1pwEscLuKVaQgcktmVTqY
           </a>
           .
@@ -90,7 +90,7 @@ export function FAQ() {
         <strong>What is the stacking node address?</strong>
         <p>
           The stacking node address is{' '}
-          <a href="https://explorer.massa.net/mainnet/address/AU12MQoZRrJhszgMKLQR7YFBXSALm42Gxcq98FwNU3KiC5aPrftyc/">
+          <a href="https://explorer.massa.net/mainnet/address/AU12MQoZRrJhszgMKLQR7YFBXSALm42Gxcq98FwNU3KiC5aPrftyc">
             AU12MQoZRrJhszgMKLQR7YFBXSALm42Gxcq98FwNU3KiC5aPrftyc
           </a>
           .
@@ -116,14 +116,14 @@ export function FAQ() {
         <strong>How did you create the website?</strong>
         <p>
           I was inspired by the official DApp created by the MassaLabs team at{' '}
-          <a href="https://github.com/massalabs/coin-vester/">
-            https://github.com/massalabs/coin-vester/
+          <a href="https://github.com/massalabs/coin-vester">
+            https://github.com/massalabs/coin-vester
           </a>
           . This GitHub repository comprises both a frontend and a smart
           contract that execute similar functions to what we aim to achieve
           here. MassaLabs has also developed a React UI kit, accessible at{' '}
-          <a href="https://github.com/massalabs/Ui-Kit/">
-            https://github.com/massalabs/Ui-Kit/
+          <a href="https://github.com/massalabs/Ui-Kit">
+            https://github.com/massalabs/Ui-Kit
           </a>
           , which features an array of excellent components and a Tailwind
           preset example. The source code of Massa Station uses this kit, making
