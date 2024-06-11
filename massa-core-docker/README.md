@@ -145,3 +145,13 @@ docker run -d --restart=always -v /var/run/docker.sock:/var/run/docker.sock:ro -
 ## [THANKS]
 
 Thanks to **fsidhoum** and **dockyr** and **peterjah** for help
+
+## License
+
+MIT
+
+## History of modifications
+
+The modifications from the <https://github.com/peterjah/massa-core-docker> are:
+
+- removing all the code about selling and buying roll
