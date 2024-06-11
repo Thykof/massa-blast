@@ -40,7 +40,6 @@ import {
   balanceOf,
   mockOriginOperationId,
   Storage,
-  balance,
 } from '@massalabs/massa-as-sdk';
 import { BlastingSession } from '../types/BlastingSession';
 import { DepositEvent } from '../events/DepositEvent';
