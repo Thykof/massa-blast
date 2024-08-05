@@ -1,4 +1,4 @@
-import { Args, bytesToStr } from '@massalabs/massa-web3';
+import { Args, bytesToStr, toMAS } from '@massalabs/massa-web3';
 import { BlastingSession } from '../lib/BlastingSession';
 import { getClient } from '../lib/utils';
 
@@ -30,5 +30,6 @@ for (const k of keys) {
       BlastingSession,
     );
     console.log(session);
+    console.log(toMAS(session.amount).toFixed(9), 'MAS');
   }
 }
