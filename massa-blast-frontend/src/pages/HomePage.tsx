@@ -48,7 +48,15 @@ export default function HomePage() {
         <section className="mb-4 p-2 text-center">
           <p className="mas-title mb-2 ">Massa Blast</p>
           <h4 className="mas-body">Stack your MAS without running a node!</h4>
-          {totalAmount && <p>{totalAmount} MAS is already blasting!</p>}
+          {/* {totalAmount && <p>{totalAmount} MAS is already blasting!</p>} */}
+          <p>
+            <strong>
+              The service has been stopped.{' '}
+              <a href="Learn morehttps://github.com/Thykof/massa-blast/blob/main/end-of-service.md">
+                Learn more
+              </a>
+            </strong>
+          </p>
         </section>
         <section className="mb-10">
           <Card>
