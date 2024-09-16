@@ -1,7 +1,7 @@
 import { ConnectMassaWallet } from '../components/ConnectMassaWallets/ConnectMassaWallet';
 import { useAccountStore } from '../store';
 import { Card } from '../components/Card';
-import { useReadBlastingSession, useTotalAmount } from '../utils/read-sc';
+import { useReadBlastingSession } from '../utils/read-sc';
 import { Deposit } from '../components/blasting/Deposit';
 import { ActiveSession } from '../components/blasting/ActiveSession';
 import { FAQ } from '../components/blasting/FAQ';
@@ -13,7 +13,6 @@ export default function HomePage() {
     massaClient,
     connectedAccount?.address(),
   );
-  const { totalAmount } = useTotalAmount(massaClient);
 
   const connected = !!connectedAccount && !!currentProvider;
 
@@ -48,7 +47,6 @@ export default function HomePage() {
         <section className="mb-4 p-2 text-center">
           <p className="mas-title mb-2 ">Massa Blast</p>
           <h4 className="mas-body">Stack your MAS without running a node!</h4>
-          {/* {totalAmount && <p>{totalAmount} MAS is already blasting!</p>} */}
           <p>
             <strong>
               The service has been stopped.{' '}
