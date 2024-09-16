@@ -1,5 +1,5 @@
 export class GetRewardsDto {
-  rolls: number;
-  from: string;
-  to: string;
+  mas: string;
+  from: number;
+  to?: number;
 }

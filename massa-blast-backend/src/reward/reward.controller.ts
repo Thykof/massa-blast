@@ -6,14 +6,14 @@ import { GetRewardsDto } from './dtos/getRewards';
 export class RewardController {
   constructor(private rewardsServer: RewardService) {}
 
-  // http://localhost:3000/reward?rolls=556&from=2024-03-11T20:49:49.866&to=2024-03-11T20:52:50.232
+  // http://localhost:3000/reward?mas=201000000000&from=1713350284000
   @Get()
   async getRewards(@Query() query: GetRewardsDto): Promise<number> {
     return Number(
       await this.rewardsServer.getRewards(
-        BigInt(query.rolls),
+        BigInt(query.mas),
         new Date(query.from),
-        new Date(query.to),
+        query.to ? new Date(query.to) : new Date(),
       ),
     );
   }
